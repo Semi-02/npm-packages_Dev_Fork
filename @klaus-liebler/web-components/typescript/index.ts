@@ -15,3 +15,5 @@ export * from "./screen_controller/timeseries_controller.ts"
 export * from "./screen_controller/usersettings_controller.ts"
 export * from "./screen_controller/journal_controller.ts"
 export * from "./screen_controller/wifimanager_controller.ts"
+//************  Testen ****************
+export *from "./screen_controller/als_controller.ts"
