@@ -16,4 +16,4 @@ export * from "./screen_controller/usersettings_controller.ts"
 export * from "./screen_controller/journal_controller.ts"
 export * from "./screen_controller/wifimanager_controller.ts"
 //************  Testen ****************
-export *from "./screen_controller/als_controller.ts"
+export *from "./screen_controller/develop_sfc_controller.ts"
