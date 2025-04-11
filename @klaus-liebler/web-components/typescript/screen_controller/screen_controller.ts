@@ -10,6 +10,9 @@ export enum ControllerState {
 
 export abstract class ScreenController implements IWebsocketMessageListener {
     private state=ControllerState.CREATED
+    public get State(): ControllerState {
+        return this.state; 
+    }
     constructor(protected appManagement: IAppManagement) {}
     
     public OnStartPublic(){

@@ -1,4 +1,4 @@
-import { ScreenController } from "@klaus-liebler/web-components";
+import { ControllerState, ScreenController } from "@klaus-liebler/web-components";
 import { TemplateResult, html, render } from "lit-html";
 import { Ref, createRef, ref } from "lit-html/directives/ref.js";
 import { ApplicationGroup, SensactApplication, SensactApplicationAndLocalFlag } from "./sensactapps_base";
@@ -104,6 +104,7 @@ export class SensactController extends ScreenController implements ISensactConte
 
     OnMessage(namespace: number, bb: flatbuffers.ByteBuffer): void {
         if (namespace != Namespace.Value) return;
+        if(this.State != ControllerState.STARTED) return; //because only when started we are interested in messages
         var messageWrapper = ResponseWrapper.getRootAsResponseWrapper(bb);
         switch (messageWrapper.responseType()) {
             case Responses.ResponseCommand:
@@ -122,14 +123,14 @@ export class SensactController extends ScreenController implements ISensactConte
     }
 
     private onResponseCommand(m: ResponseCommand) {
-        console.log("Command confirmed");
+        console.debug("Command confirmed");
     }
 
     private onNotifyStatus(m: NotifyStatus) {
-        console.info("onNotifyStatus");
+        
         var appc = this.id2appContainer.get(m.id());
         if (!appc) {
-            console.warn(`Unknown app with id ${m.id()}`);
+            //console.debug(`Unknown app with id ${m.id()}`);
             return;
         }
         const arr = new Uint16Array([
@@ -138,6 +139,7 @@ export class SensactController extends ScreenController implements ISensactConte
             m.status()!.data(2) ?? 0,
             m.status()!.data(3) ?? 0,
         ]);
+        console.debug(`onNotifyStatus for app '${appc.app.ApplicationDescription}' with data ${arr}`);
         appc.app.UpdateState(arr);
         this.execTemplates();
     }

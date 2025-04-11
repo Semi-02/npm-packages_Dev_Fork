@@ -193,37 +193,54 @@ export class BlindsTimerApplication extends SensactApplication {
   }
 }
 
-export class BlindApplication extends SensactApplication {
+enum  eCurrentBlindState //copied from c++ code
 
+		{
+			ENERGY_SAVE,
+			STOP,
+			PREPARE_UP,
+			PREPARE_DOWN,
+			UP,
+			DOWN,
+		};
+
+export class BlindApplication extends SensactApplication {
   private upElement: Ref<HTMLInputElement> = createRef()
   private stopElement: Ref<HTMLInputElement> = createRef()
   private downElement: Ref<HTMLInputElement> = createRef()
+  private progressElement: Ref<HTMLProgressElement> = createRef()
+  private movement: eCurrentBlindState = eCurrentBlindState.STOP;
+  private positionAsPercentage: number = 0;
 
   public UpdateState(state:Uint16Array){
     this.ConfirmSuccessfulWrite();
-    //var pos = (state32bit & 0xFF);
-    //var dir = (state32bit & 0xFF00)>>8;
+    this.movement=<eCurrentBlindState>state[0];
+    this.positionAsPercentage=state[1];
+    console.log(`${fb.ApplicationId[this.applicationId]} recvs  ${eCurrentBlindState[state[0]]}, POS%: ${this.positionAsPercentage}%`);
+    this.progressElement.value!.value=this.positionAsPercentage;
   }
 
   onStop() {
     cmd.SendSTOPCommand(this.applicationId, this.ctx);
-    console.log(`blind_stop ${this.applicationId}`);
+    console.log(`${fb.ApplicationId[this.applicationId]} sends stop! `);
   }
 
   onUp() {
     cmd.SendUPCommand(this.applicationId, 0, this.ctx);
-    console.log(`blind_stop ${this.applicationId}`);
+    console.log(`${fb.ApplicationId[this.applicationId]}} sends up! `);
   }
 
   onDown() {
     cmd.SendDOWNCommand(this.applicationId, 0, this.ctx);
-    console.log(`blind_down ${this.applicationId}`);
+    console.log(`${fb.ApplicationId[this.applicationId]}} sends down! `);
   }
 
   protected CoreAppHtmlTemplate = () => html`
-  <button ${ref(this.upElement)} @click=${() => this.onUp()}>▲</button>
+  <button ${ref(this.upElement)} @click=${() => this.onUp()} class="${this.movement==eCurrentBlindState.UP?'active':''}">▲</button>
   <button ${ref(this.stopElement)} @click=${() => this.onStop()}>▮</button>
-  <button ${ref(this.downElement)} @click=${() => this.onDown()}>▼</button>
+  <button ${ref(this.downElement)} @click=${() => this.onDown()} class="${this.movement==eCurrentBlindState.DOWN?'active':''}">▼</button>
+  <progress ${ref(this.progressElement)} max="100"></progress>
+
   `
 }
 
@@ -233,11 +250,12 @@ export class SinglePwmApplication extends SensactApplication {
   private inputElement: Ref<HTMLButtonElement> = createRef()
   private on:boolean=false;
   private level:number=-1;
+  private lastUserInteraction:number=0;
   
   private oninput(e:MouseEvent) {
     const _b = e.currentTarget as HTMLButtonElement;
     cmd.SendTOGGLECommand(this.applicationId, this.ctx);
-    console.log(`SinglePwmApplication ${this.applicationId} got TOGGLEd`);
+    console.log(`${fb.ApplicationId[this.applicationId]} got TOGGLEd`);
   }
   /*
 	eAppCallResult cSinglePWM::FillStatus(iSensactContext &ctx, std::array<uint16_t, 4>& buf){
@@ -250,18 +268,26 @@ export class SinglePwmApplication extends SensactApplication {
   */
 
   public UpdateState(state:Uint16Array){
-    console.info(`SinglePwmApplication::UpdateState ${this.applicationId} ${state[0]==0?"OFF":"ON"}, PWM: ${state[1]}`);
+   
     this.ConfirmSuccessfulWrite();
-    if(this.level=-1) this.level=state[1];//only do this once to avoid flickering
-    this.on=state[0]!=0;
+    this.level=state[1]; //das ist das storedLevel, das repräsentiert die Stellung des Sliders wohl am besten
+    this.on=state[0]!=0; //das ist abhängig vom targetLevel
+    if (Date.now()-this.lastUserInteraction>3000) {//wenn 3 Sekunden keine User-Interaktion, dann den Slider auf den aktuellen Wert setzen
+      this.sliderElement.value!.valueAsNumber=this.level;
+      //this.sliderElement.value!.disabled=!this.on;
+      console.info(`${fb.ApplicationId[this.applicationId]} recvs  ${state[3]} ${state[0]==0?"OFF":"ON"}(is: ${this.sliderElement.value!.valueAsNumber})`);
+    }else{
+      console.info(`${fb.ApplicationId[this.applicationId]} blocks ${state[3]} ${state[0]==0?"OFF":"ON"}(is: ${this.sliderElement.value!.valueAsNumber})`);
+    }
   }
 
   private onslide() {
+    this.lastUserInteraction=Date.now();
+    console.info(`${fb.ApplicationId[this.applicationId]} sends  ${this.sliderElement.value!.valueAsNumber}`);
     cmd.SendSET_VERTICAL_TARGETCommand(this.applicationId, this.sliderElement.value!.valueAsNumber, this.ctx);
-    console.log(`singlepwm_slider ${this.applicationId} ${this.sliderElement.value!.valueAsNumber}`);
   }
   protected CoreAppHtmlTemplate = () => html`
   <button ${ref(this.inputElement)} class="withsvg toggle-button ${this.on?'active':''}" style="fill:yellow;" @click=${(e:MouseEvent) => this.oninput(e)}>${unsafeSVG(lightbulb)}<span>On Off<span></button>
-  <input ${ref(this.sliderElement)} @input=${() => this.onslide()} type="range" min="0" max="65535" value="${this.level}">
+  <input ${ref(this.sliderElement)} @mouseup=${()=>this.lastUserInteraction=Date.now()} @touchend=${()=>this.lastUserInteraction=Date.now()} @change=${()=>this.lastUserInteraction=Date.now()} @input=${() => this.onslide()} type="range" min="0" max="65535">
   `
 }

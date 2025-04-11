@@ -344,7 +344,7 @@ button.withsvg {
     }
   }
 }
-button.toggle-button.active{
+button.active{
   background-color: #007bff;
   color: #fff;
   border-color: #007bff;
