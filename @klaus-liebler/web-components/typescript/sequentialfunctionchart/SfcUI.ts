@@ -1,3 +1,29 @@
+/**
+ * =============================================================================
+ * @file        MyAwesomeClass.ts
+ * @description Zentrale Klasse zur Verarbeitung von Nutzerdaten.
+ *              Implementiert Geschäftslogik für das Auth-Modul.
+ * 
+ * @author      Felix Lukowski, Jan Heitmeier
+ * @created     2025-04-25
+ * @version     1.0.0
+ * 
+ * @methods
+ *    - constructor(config: Config): void
+ *        Initialisiert die Klasse mit der gegebenen Konfiguration.
+ * 
+ *    - validateUserInput(user: UserInput, strict: boolean): ValidationResult
+ *        Führt Validierungen auf Nutzerdaten durch.
+ * 
+ *    - authenticate(token: string): Promise<User>
+ *        Authentifiziert den Benutzer über ein JWT.
+ * 
+ *    - reset(): void
+ *        Setzt den internen Zustand zurück.
+ * 
+ * =============================================================================
+ */
+
 import { ColorNumColor2ColorDomString, EventCoordinatesInSVG, Html, Svg } from "../utils/common";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcAction, SfcOperator, SfcTransition } from "./SfcData";
@@ -10,10 +36,7 @@ export class SfcOptions {
     distanceFromArrow: number = 3;
     defaultOperatorClass: string = 'sfc-default-operator';
     defaultLinkColor: string = '#3366ff';
-    linkWidth: number = 10;
     grid: number = 10;
-    multipleLinksOnOutput: boolean = true;
-    multipleLinksOnInput: boolean = false;
     httpServerBasePath = "/files"
     constructor(httpServerPrexix: string) {
         this.httpServerBasePath = httpServerPrexix + this.httpServerBasePath;
