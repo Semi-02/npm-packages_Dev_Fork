@@ -23,7 +23,7 @@
  * 
  * =============================================================================
  */
-
+import { Flowchart } from "../flowchart/Flowchart";
 import { ColorNumColor2ColorDomString, EventCoordinatesInSVG, Html, Svg } from "../utils/common";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcAction, SfcOperator, SfcTransition } from "./SfcData";
@@ -66,12 +66,13 @@ export class SfcUI {
 
 
         this.buildMenu(subcontainer);
+        //Tablen aufteiltung hier machen und dann über unterfunktionen bevölkern
 
         // Testinhalt in einem neuen div erstellen und anhängen
         const testDiv = document.createElement("div");
         testDiv.innerHTML = "<h1>Testinhalt (hier Table)</h1>";
         subcontainer.appendChild(testDiv);
-
+        
 
     }
 
@@ -106,10 +107,13 @@ export class SfcUI {
         mm.Render(subcontainer)
     }
 
-    constructor(private appManagement: IAppManagement, private flowchartData: SfcData, private flowchartCallbacks: SfcCallback, private options: SfcOptions) {
-        if (!this.flowchartData) throw new Error("flowchartData is null");
-        if (!this.flowchartCallbacks) throw new Error("flowchartCallbacks is null");
+    constructor(private appManagement: IAppManagement, private sfcData: SfcData, private sfcCallbacks: SfcCallback, private options: SfcOptions) {
+        if (!this.sfcData) throw new Error("sfcData is null");
+        if (!this.sfcCallbacks) throw new Error("sfcCallbacks is null");
         if (!this.options) throw new Error("options is null");
         if (!this.appManagement) throw new Error("appManagement is null");
     }
+
+    //To-Do: SFC HttpL Request Funktion schrieben und in Menü integrieren
+
 }
