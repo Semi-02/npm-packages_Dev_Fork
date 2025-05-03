@@ -50,7 +50,7 @@ export interface SfcTransition {
     condition: string[]; //Boolean condition
 }
 
-enum SfcTransitionType {
+export enum SfcTransitionType {
     simple = "simple", //Simple transition with one source and one target
     joiner = "joiner", //Joiner transition with multiple sources and one target
     splitter_simultan = "splitter_simultan", //Splitter transition with one source and multiple targets

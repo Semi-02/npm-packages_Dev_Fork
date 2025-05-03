@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * @file        MyAwesomeClass.ts
+ * @file        SfcUIs.ts
  * @description Zentrale Klasse zur Verarbeitung von Nutzerdaten.
  *              Implementiert Geschäftslogik für das Auth-Modul.
  * 
@@ -28,6 +28,7 @@ import { ColorNumColor2ColorDomString, EventCoordinatesInSVG, Html, Svg } from "
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcAction, SfcOperator, SfcTransition } from "./SfcData";
 import { IAppManagement } from "../utils/interfaces";
+import { SfcTransitionType } from "./SfcData";
 
 //To-Do : Überarbeiten auf Sfc
 export class SfcOptions {
@@ -67,10 +68,165 @@ export class SfcUI {
 
         this.buildMenu(subcontainer);
 
-        // Testinhalt in einem neuen div erstellen und anhängen
+        // Testinhalt in einem neuen div für sfc
         const testDiv = document.createElement("div");
-        testDiv.innerHTML = "<h1>Testinhalt (hier Table)</h1>";
+        testDiv.style.display = "grid";
+        testDiv.style.gridTemplateColumns = "1fr 1fr";
+        testDiv.style.gap = "10px";
+        testDiv.style.height = "100%";
+        testDiv.style.padding = "10px";
+        testDiv.style.boxSizing = "border-box";
+
+        // Linker Bereich (z. B. Operatoren)
+        const leftGrid = document.createElement("div");
+        leftGrid.style.border = "1px solid #ccc";
+        leftGrid.style.padding = "10px";
+        leftGrid.innerHTML = "<h2>Operatoren</h2>";
+
+        // Rechter Bereich (z. B. Details, Aktionen)
+        const rightGrid = document.createElement("div");
+        rightGrid.style.border = "1px solid #ccc";
+        rightGrid.style.padding = "10px";
+        rightGrid.innerHTML = "<h2>Details / Aktionen</h2>";
+
+        testDiv.appendChild(leftGrid);
+        testDiv.appendChild(rightGrid);
         subcontainer.appendChild(testDiv);
+
+        // ******************************************************
+        // Falls keine Operatoren vorhanden sind, Info anzeigen + Button
+        if (!this.flowchartData.operator || this.flowchartData.operator.length === 0) {
+            const emptyMessage = document.createElement("div");
+            emptyMessage.textContent = "Noch keine Operatoren vorhanden.";
+            emptyMessage.style.fontStyle = "italic";
+            emptyMessage.style.color = "#888";
+
+            const addButton = document.createElement("button");
+            addButton.textContent = "+ Ersten Operator hinzufügen";
+            addButton.style.marginTop = "10px";
+            addButton.onclick = () => {
+                // Beispieloperator erstellen
+                const newOperator: SfcOperator = {
+                    Uid: "op_" + Date.now(), // einfache eindeutige ID
+                    caption: "Neuer Startoperator",
+                    actions: [],
+                    sourceTransitions: {
+                        type: SfcTransitionType.simple, //enum SfcTransitionType
+                        source: [],
+                        sourceDone: [],
+                        target: [],
+                        condition: []
+                    },
+                    targetTransitions: {
+                        type: SfcTransitionType.simple, //enum SfcTransitionType
+                        source: [],
+                        sourceDone: [],
+                        target: [],
+                        condition: []
+                    }
+                };
+            
+                // Initialisiere Operator-Array, falls nicht vorhanden
+                if (!this.flowchartData.operator) {
+                    this.flowchartData.operator = [];
+                }
+            
+                // Neuen Operator zur Datenstruktur hinzufügen
+                this.flowchartData.operator.push(newOperator);
+            
+                // UI neu rendern
+                subcontainer.innerHTML = ""; // Vorheriges UI löschen
+                this.RenderUi(subcontainer); // Neu aufbauen
+            };
+            
+
+            leftGrid.appendChild(emptyMessage);
+            leftGrid.appendChild(addButton);
+            return; // Wichtig: Danach nicht weitermachen
+        }
+
+        // Operatoren aus den Daten anzeigen
+    this.flowchartData.operator.forEach((op) => {
+    const operatorBlock = document.createElement("div");
+    operatorBlock.style.border = "1px solid #000";
+    operatorBlock.style.padding = "8px";
+    operatorBlock.style.marginBottom = "10px";
+    operatorBlock.style.position = "relative";
+    operatorBlock.style.backgroundColor = "#f9f9f9";
+    operatorBlock.style.borderRadius = "5px";
+
+    // Caption
+    const caption = document.createElement("div");
+    caption.textContent = op.caption;
+    caption.style.fontWeight = "bold";
+    operatorBlock.appendChild(caption);
+
+    // Richtungsbuttons
+    const directions = ["↑", "→", "↓", "←"];
+    const directionWrapper = document.createElement("div");
+    directionWrapper.style.display = "flex";
+    directionWrapper.style.gap = "5px";
+    directionWrapper.style.marginTop = "5px";
+
+    directions.forEach((dir) => {
+        const btn = document.createElement("button");
+        btn.textContent = dir;
+        btn.title = `Füge Operator ${dir} hinzu`;
+        btn.style.padding = "2px 5px";
+        btn.style.fontSize = "12px";
+        btn.style.cursor = "pointer";
+    
+        btn.onclick = () => {
+            const newOp: SfcOperator = {
+                Uid: "op_" + Date.now(),
+                caption: `Neu (${dir})`,
+                actions: [],
+                sourceTransitions: {
+                    type: SfcTransitionType.simple, //enum SfcTransitionType
+                    source: [],
+                    sourceDone: [],
+                    target: [],
+                    condition: []
+                },
+                targetTransitions: {
+                    type: SfcTransitionType.simple, //enum SfcTransitionType
+                    source: [],
+                    sourceDone: [],
+                    target: [],
+                    condition: []
+                }
+            };
+    
+            // Neue Transition zwischen aktuellem und neuem Operator
+            const newTransition: SfcTransition = {
+                type: SfcTransitionType.simple, //enum SfcTransitionType
+                source: [op],
+                sourceDone: [false],
+                target: [newOp],
+                condition: ["true"]
+            };
+    
+            // Verbindung hinzufügen
+            op.targetTransitions = newTransition;
+            newOp.sourceTransitions = newTransition;
+    
+            // Zur Datenstruktur hinzufügen
+            this.flowchartData.operator.push(newOp);
+    
+            // Neu rendern
+            subcontainer.innerHTML = "";
+            this.RenderUi(subcontainer);
+        };
+    
+        directionWrapper.appendChild(btn);
+    });
+    
+
+    operatorBlock.appendChild(directionWrapper);
+    leftGrid.appendChild(operatorBlock);
+});
+
+
 
 
     }
