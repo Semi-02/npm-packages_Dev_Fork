@@ -6,7 +6,7 @@ import { ScreenController } from "./screen_controller";
 import { IAppManagement } from "../utils/interfaces";
 import * as flatbuffers from "flatbuffers"
 import { SfcUI,SfcOptions,SfcCallback } from "../sequentialfunctionchart/SfcUI";
-import { SfcData } from "../sequentialfunctionchart/SfcData";
+import { SfcData,SfcBooleans } from "../sequentialfunctionchart/SfcData";
 
 export class DevelopSFCController extends ScreenController {
 
@@ -23,6 +23,7 @@ export class DevelopSFCController extends ScreenController {
         //To-Do : ENums für verschiedene Modi in SfcUi Einführen.
        // this.timer = window.setInterval(() => { this.fc.TriggerDebug();}, 1000);
         this.sfcui.RenderUi(this.mainDiv.value!);
+
     }
 
     OnRestart(): void {
@@ -39,7 +40,7 @@ export class DevelopSFCController extends ScreenController {
    //To-Do : Datenklassen anpassen an SfcData und Manager
   constructor(appManagement:IAppManagement, httpServerPrexix="") {
         super(appManagement);
-        let data: SfcData = {start:null,operator:[],transitions:[], bools:[]};
+        let data: SfcData = {start:null,operator:[],booleans: <SfcBooleans>{redLed:false,yellowLed:false,greenLed:false}};
         let options = new SfcOptions(httpServerPrexix);
         let callbacks = new SfcCallback();
         this.sfcui = new SfcUI(this.appManagement, data, callbacks, options);

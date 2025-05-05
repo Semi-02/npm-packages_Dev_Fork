@@ -23,7 +23,7 @@
  * 
  * =============================================================================
  */
-
+import { Flowchart } from "../flowchart/Flowchart";
 import { ColorNumColor2ColorDomString, EventCoordinatesInSVG, Html, Svg } from "../utils/common";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcAction, SfcOperator, SfcTransition } from "./SfcData";
@@ -67,6 +67,7 @@ export class SfcUI {
 
 
         this.buildMenu(subcontainer);
+        //Tablen aufteiltung hier machen und dann über unterfunktionen bevölkern
 
         // Testinhalt in einem neuen div für sfc
         const testDiv = document.createElement("div");
@@ -92,10 +93,11 @@ export class SfcUI {
         testDiv.appendChild(leftGrid);
         testDiv.appendChild(rightGrid);
         subcontainer.appendChild(testDiv);
+        
 
         // ******************************************************
         // Falls keine Operatoren vorhanden sind, Info anzeigen + Button
-        if (!this.flowchartData.operator || this.flowchartData.operator.length === 0) {
+        if (!this.sfcData.operator || this.sfcData.operator.length === 0) {
             const emptyMessage = document.createElement("div");
             emptyMessage.textContent = "Noch keine Operatoren vorhanden.";
             emptyMessage.style.fontStyle = "italic";
@@ -127,12 +129,12 @@ export class SfcUI {
                 };
             
                 // Initialisiere Operator-Array, falls nicht vorhanden
-                if (!this.flowchartData.operator) {
-                    this.flowchartData.operator = [];
+                if (!this.sfcData.operator) {
+                    this.sfcData.operator = [];
                 }
             
                 // Neuen Operator zur Datenstruktur hinzufügen
-                this.flowchartData.operator.push(newOperator);
+                this.sfcData.operator.push(newOperator);
             
                 // UI neu rendern
                 subcontainer.innerHTML = ""; // Vorheriges UI löschen
@@ -146,7 +148,7 @@ export class SfcUI {
         }
 
         // Operatoren aus den Daten anzeigen
-    this.flowchartData.operator.forEach((op) => {
+    this.sfcData.operator.forEach((op) => {
     const operatorBlock = document.createElement("div");
     operatorBlock.style.border = "1px solid #000";
     operatorBlock.style.padding = "8px";
@@ -211,7 +213,7 @@ export class SfcUI {
             newOp.sourceTransitions = newTransition;
     
             // Zur Datenstruktur hinzufügen
-            this.flowchartData.operator.push(newOp);
+            this.sfcData.operator.push(newOp);
     
             // Neu rendern
             subcontainer.innerHTML = "";
@@ -262,10 +264,13 @@ export class SfcUI {
         mm.Render(subcontainer)
     }
 
-    constructor(private appManagement: IAppManagement, private flowchartData: SfcData, private flowchartCallbacks: SfcCallback, private options: SfcOptions) {
-        if (!this.flowchartData) throw new Error("flowchartData is null");
-        if (!this.flowchartCallbacks) throw new Error("flowchartCallbacks is null");
+    constructor(private appManagement: IAppManagement, private sfcData: SfcData, private sfcCallbacks: SfcCallback, private options: SfcOptions) {
+        if (!this.sfcData) throw new Error("sfcData is null");
+        if (!this.sfcCallbacks) throw new Error("sfcCallbacks is null");
         if (!this.options) throw new Error("options is null");
         if (!this.appManagement) throw new Error("appManagement is null");
     }
+
+    //To-Do: SFC HttpL Request Funktion schrieben und in Menü integrieren
+
 }

@@ -13,6 +13,13 @@
 export interface SfcData {    
     start: SfcOperator; //Start operator of the chart
     operator : SfcOperator[];
+    booleans: SfcBooleans; //List of boolean actions
+}
+
+export interface SfcBooleans{
+    redLed: boolean; //Value of the boolean
+    yellowLed: boolean; //Value of the boolean
+    greenLed: boolean; //Value of the boolean
 }
 
 export interface SfcOperator {
