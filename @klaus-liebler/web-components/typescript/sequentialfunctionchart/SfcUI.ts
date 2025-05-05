@@ -29,6 +29,8 @@ import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcAction, SfcOperator, SfcTransition } from "./SfcData";
 import { IAppManagement } from "../utils/interfaces";
 import { SfcTransitionType } from "./SfcData";
+import { SfcCompiler } from "./SfcCompiler";
+
 
 //To-Do : Überarbeiten auf Sfc
 export class SfcOptions {
@@ -60,6 +62,8 @@ export class SfcCallback {
 }
 
 export class SfcUI {
+
+    private compiler: SfcCompiler;
 
     public RenderUi(subcontainer: HTMLDivElement) {
         if (!subcontainer) throw new Error("container is null");
@@ -93,7 +97,7 @@ export class SfcUI {
         testDiv.appendChild(leftGrid);
         testDiv.appendChild(rightGrid);
         subcontainer.appendChild(testDiv);
-        
+
 
         // ******************************************************
         // Falls keine Operatoren vorhanden sind, Info anzeigen + Button
@@ -127,20 +131,21 @@ export class SfcUI {
                         condition: []
                     }
                 };
-            
+
                 // Initialisiere Operator-Array, falls nicht vorhanden
                 if (!this.sfcData.operator) {
                     this.sfcData.operator = [];
                 }
-            
+
                 // Neuen Operator zur Datenstruktur hinzufügen
                 this.sfcData.operator.push(newOperator);
-            
+                //To-Do: Hier auch den Startoperator setzen
+
                 // UI neu rendern
                 subcontainer.innerHTML = ""; // Vorheriges UI löschen
                 this.RenderUi(subcontainer); // Neu aufbauen
             };
-            
+
 
             leftGrid.appendChild(emptyMessage);
             leftGrid.appendChild(addButton);
@@ -148,89 +153,112 @@ export class SfcUI {
         }
 
         // Operatoren aus den Daten anzeigen
-    this.sfcData.operator.forEach((op) => {
-    const operatorBlock = document.createElement("div");
-    operatorBlock.style.border = "1px solid #000";
-    operatorBlock.style.padding = "8px";
-    operatorBlock.style.marginBottom = "10px";
-    operatorBlock.style.position = "relative";
-    operatorBlock.style.backgroundColor = "#f9f9f9";
-    operatorBlock.style.borderRadius = "5px";
+        this.sfcData.operator.forEach((op) => {
+            const operatorBlock = document.createElement("div");
+            operatorBlock.style.border = "1px solid #000";
+            operatorBlock.style.padding = "8px";
+            operatorBlock.style.marginBottom = "10px";
+            operatorBlock.style.position = "relative";
+            operatorBlock.style.backgroundColor = "#f9f9f9";
+            operatorBlock.style.borderRadius = "5px";
 
-    // Caption
-    const caption = document.createElement("div");
-    caption.textContent = op.caption;
-    caption.style.fontWeight = "bold";
-    operatorBlock.appendChild(caption);
+            // Caption
+            const caption = document.createElement("div");
+            caption.textContent = op.caption;
+            caption.style.fontWeight = "bold";
+            operatorBlock.appendChild(caption);
 
-    // Richtungsbuttons
-    const directions = ["↑", "→", "↓", "←"];
-    const directionWrapper = document.createElement("div");
-    directionWrapper.style.display = "flex";
-    directionWrapper.style.gap = "5px";
-    directionWrapper.style.marginTop = "5px";
+            // Richtungsbuttons
+            const directions = ["↑", "→", "↓", "←"];
+            const directionWrapper = document.createElement("div");
+            directionWrapper.style.display = "flex";
+            directionWrapper.style.gap = "5px";
+            directionWrapper.style.marginTop = "5px";
 
-    directions.forEach((dir) => {
-        const btn = document.createElement("button");
-        btn.textContent = dir;
-        btn.title = `Füge Operator ${dir} hinzu`;
-        btn.style.padding = "2px 5px";
-        btn.style.fontSize = "12px";
-        btn.style.cursor = "pointer";
+            directions.forEach((dir) => {
+                const btn = document.createElement("button");
+                btn.textContent = dir;
+                btn.title = `Füge Operator ${dir} hinzu`;
+                btn.style.padding = "2px 5px";
+                btn.style.fontSize = "12px";
+                btn.style.cursor = "pointer";
+
+                btn.onclick = () => {
+                    const newOp: SfcOperator = {
+                        Uid: "op_" + Date.now(),
+                        caption: `Neu (${dir})`,
+                        actions: [],
+                        sourceTransitions: {
+                            type: SfcTransitionType.simple, //enum SfcTransitionType
+                            source: [],
+                            sourceDone: [],
+                            target: [],
+                            condition: []
+                        },
+                        targetTransitions: {
+                            type: SfcTransitionType.simple, //enum SfcTransitionType
+                            source: [],
+                            sourceDone: [],
+                            target: [],
+                            condition: []
+                        }
+                    };
+
+                    // Neue Transition zwischen aktuellem und neuem Operator
+                    const newTransition: SfcTransition = {
+                        type: SfcTransitionType.simple, //enum SfcTransitionType
+                        source: [op],
+                        sourceDone: [false],
+                        target: [newOp],
+                        condition: ["true"]
+                    };
+
+                    // Verbindung hinzufügen
+                    op.targetTransitions = newTransition;
+                    newOp.sourceTransitions = newTransition;
+
+                    // Zur Datenstruktur hinzufügen
+                    this.sfcData.operator.push(newOp);
+
+                    // Neu rendern
+                    subcontainer.innerHTML = "";
+                    this.RenderUi(subcontainer);
+                };
+
+                directionWrapper.appendChild(btn);
+            });
+
+
+            operatorBlock.appendChild(directionWrapper);
+            leftGrid.appendChild(operatorBlock);
+        });
+    }
+
+    private async postSfcData() {
+        try {
+            // Kompiliere die SfcData in JSON
+            const jsonData = this.compiler.Compile(this.sfcData);
     
-        btn.onclick = () => {
-            const newOp: SfcOperator = {
-                Uid: "op_" + Date.now(),
-                caption: `Neu (${dir})`,
-                actions: [],
-                sourceTransitions: {
-                    type: SfcTransitionType.simple, //enum SfcTransitionType
-                    source: [],
-                    sourceDone: [],
-                    target: [],
-                    condition: []
+            // Sende die JSON-Daten an den Plugin-Server
+            //To-Do: Fetch wird abgebrochenb, weil das Zertifikat von dem plugin punkt nicht akzeptiert wird.
+            //       DAs muss iwie umgangen werden.            
+            const response = await fetch("http://localhost:8090/sfc-data", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
                 },
-                targetTransitions: {
-                    type: SfcTransitionType.simple, //enum SfcTransitionType
-                    source: [],
-                    sourceDone: [],
-                    target: [],
-                    condition: []
-                }
-            };
+                body: jsonData,
+            });
     
-            // Neue Transition zwischen aktuellem und neuem Operator
-            const newTransition: SfcTransition = {
-                type: SfcTransitionType.simple, //enum SfcTransitionType
-                source: [op],
-                sourceDone: [false],
-                target: [newOp],
-                condition: ["true"]
-            };
-    
-            // Verbindung hinzufügen
-            op.targetTransitions = newTransition;
-            newOp.sourceTransitions = newTransition;
-    
-            // Zur Datenstruktur hinzufügen
-            this.sfcData.operator.push(newOp);
-    
-            // Neu rendern
-            subcontainer.innerHTML = "";
-            this.RenderUi(subcontainer);
-        };
-    
-        directionWrapper.appendChild(btn);
-    });
-    
-
-    operatorBlock.appendChild(directionWrapper);
-    leftGrid.appendChild(operatorBlock);
-});
-
-
-
-
+            if (response.ok) {
+                const responseData = await response.json();
+                console.log("SfcData erfolgreich gesendet:", responseData);
+            } else {
+                console.error("Fehler beim Senden der SfcData:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Fehler in postSfcData:", error);
+        }
     }
 
     private buildMenu(subcontainer: HTMLDivElement) {
@@ -251,7 +279,7 @@ export class SfcUI {
                     new MenuItem("💾 Save (labathome)", () => null),
                 ]),
                 new Menu("Debug", [
-                    new MenuItem("☭ Start Debug", () => null),
+                    new MenuItem("☭ Start Debug", () => this.postSfcData()),
                     new MenuItem("× Stop Debug", () => null),
                     new MenuItem("👣 Set as Startup-App", () => null),
                 ]),
@@ -269,6 +297,7 @@ export class SfcUI {
         if (!this.sfcCallbacks) throw new Error("sfcCallbacks is null");
         if (!this.options) throw new Error("options is null");
         if (!this.appManagement) throw new Error("appManagement is null");
+        this.compiler = new SfcCompiler();
     }
 
     //To-Do: SFC HttpL Request Funktion schrieben und in Menü integrieren
