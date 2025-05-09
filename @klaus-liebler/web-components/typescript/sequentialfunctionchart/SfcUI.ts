@@ -89,108 +89,188 @@ export class SfcUI {
     }
 
     private buildMenu(subcontainer: HTMLDivElement) {
-        //Datei mit existierender Configuration reinladen 
-        let fileInput = <HTMLInputElement>Html(subcontainer, "input", ["type", "file", "id", "fileInput", "accept", ".json"]);
-        fileInput.style.display = "none";
-        fileInput.onchange = (e) => {
-            //this.openFbdFromLocalFile(fileInput.files);
-        }
+      // Menü oben im Container
+      let fileInput = <HTMLInputElement>Html(subcontainer, "input", ["type", "file", "id", "fileInput", "accept", ".json"]);
+      fileInput.style.display = "none";
+      fileInput.onchange = (e) => {
+          //this.openFbdFromLocalFile(fileInput.files);
+      };
+  
+      const mm: MenuManager = new MenuManager(
+          [
+              new Menu("File", [
+                  new MenuItem("📂 Open (Local)", () => null),
+                  new MenuItem("📂 Open (labathome)", () => null),
+                  new MenuItem("📂 Open Default (labathome)", () => null),
+                  new MenuItem("💾 Save (Local)", () => null),
+                  new MenuItem("💾 Save (labathome)", () => null),
+              ]),
+              new Menu("Debug", [
+                  new MenuItem("☭ Start Debug", () => this.postSfcData()),
+                  new MenuItem("× Stop Debug", () => null),
+                  new MenuItem("👣 Set as Startup-App", () => null),
+              ]),
+              new Menu("Simulation", [
+                  new MenuItem("➤ Start Simulation", () => null),
+                  new MenuItem("× Stop Simulation", () => null)
+              ])
+          ]
+      );
+  
+      
+      mm.Render(subcontainer);
+  }
+  
+  
+  private buildGrid(gridcontainer: HTMLDivElement) {
+    // Container vorbereiten
+    gridcontainer.style.display = "flex";
+    gridcontainer.style.flexDirection = "column";
+    gridcontainer.style.flex = "1";
+    gridcontainer.style.width = "100%";
+    gridcontainer.style.marginTop = "8px"; // Genug Abstand unter Menü
+    gridcontainer.style.overflow = "hidden";
 
-        var mm: MenuManager = new MenuManager(
-            [
-                new Menu("File", [
-                    new MenuItem("📂 Open (Local)", () => null),
-                    new MenuItem("📂 Open (labathome)", () => null),
-                    new MenuItem("📂 Open Default (labathome)", () => null),
-                    new MenuItem("💾 Save (Local)", () => null),
-                    new MenuItem("💾 Save (labathome)", () => null),
-                ]),
-                new Menu("Debug", [
-                    new MenuItem("☭ Start Debug", () => this.postSfcData()),
-                    new MenuItem("× Stop Debug", () => null),
-                    new MenuItem("👣 Set as Startup-App", () => null),
-                ]),
-                new Menu("Simulation", [
-                    new MenuItem("➤ Start Simulation", () => null),
-                    new MenuItem("× Stop Simulation", () => null)
-                ])
-            ]
-        );
-        mm.Render(subcontainer)
-    }
-    private buildGrid(gridcontainer: HTMLDivElement) {
-        // Setze den Subcontainer auf Flexbox mit horizontaler Ausrichtung
-        gridcontainer.style.display = "flex";
-        gridcontainer.style.flexDirection = "row"; // Horizontal ausgerichtet
-        gridcontainer.style.height = "100%";
-        gridcontainer.style.width = "100%";
-    
-        // Erstelle Diagram-Bereich (2/3 der Breite)
-        const diagramContainer = document.createElement("div");
-        diagramContainer.style.flex = "2"; // 2/3 der Breite
-        diagramContainer.style.border = "1px solid #ccc"; // Optional: Rahmen für Sichtbarkeit
-        diagramContainer.style.height = "100%"; // Volle Höhe
-        this.buildDiagram(diagramContainer);
-        gridcontainer.appendChild(diagramContainer);
-    
-        // Erstelle BooleanField-Bereich (1/3 der Breite)
-        const booleanFieldContainer = document.createElement("div");
-        booleanFieldContainer.style.flex = "1"; // 1/3 der Breite
-        booleanFieldContainer.style.border = "1px solid #ccc"; // Optional: Rahmen für Sichtbarkeit
-        booleanFieldContainer.style.height = "100%"; // Volle Höhe
-        this.buildBooleanField(booleanFieldContainer);
-        gridcontainer.appendChild(booleanFieldContainer);
-    }
-   // Annahme: this.sfcData vom Typ SfcData ist bereits definiert und enthält beispielsweise 6 Steps.
-private buildDiagram(diagramContainer: HTMLDivElement) {
-  // Vorherige Inhalte entfernen.
-  diagramContainer.innerHTML = "";
+    // Diagrammbereich
+    const diagramContainer = document.createElement("div");
+    diagramContainer.style.flex = "1";
+    diagramContainer.style.border = "1px solid #ccc";
+    diagramContainer.style.padding = "16px";
+    diagramContainer.style.overflowY = "auto"; // Scrollbar bei Bedarf
+    this.buildDiagram(diagramContainer);
+    gridcontainer.appendChild(diagramContainer);
 
-  // Konfiguriere den Container als Grid mit 3 Spalten (ergibt 6 Felder, wenn 6 Steps vorhanden sind)
-  diagramContainer.style.display = "grid";
-  diagramContainer.style.gridTemplateColumns = "repeat(3, 1fr)";
-  diagramContainer.style.gap = "10px";
-  diagramContainer.style.padding = "10px";
-
-  // Iteriere über alle Steps und erstelle ein Layout pro Step.
-  this.sfcData.steps.forEach(step => {
-    // Erstelle den roten Container (das segmentierte Layout)
-    const segmentContainer = document.createElement("div");
-    segmentContainer.style.border = "2px solid red";
-    segmentContainer.style.display = "flex";
-    segmentContainer.style.flexDirection = "column";
-    segmentContainer.style.height = "150px"; // Feste Höhe – kann je nach Wunsch angepasst werden.
-
-    // Erstelle den gelben Bereich, der den Step repräsentiert.
-    const stepHeader = document.createElement("div");
-    stepHeader.style.backgroundColor = "yellow";
-    stepHeader.style.padding = "5px";
-    stepHeader.style.textAlign = "center";
-    stepHeader.style.fontWeight = "bold";
-    stepHeader.textContent = step.caption; // Hier kann auch step.uid oder eine komplexere Darstellung genutzt werden.
-    segmentContainer.appendChild(stepHeader);
-
-    // Erstelle den blauen Bereich, der die zugehörigen Actions anzeigt.
-    const actionsContainer = document.createElement("div");
-    actionsContainer.style.backgroundColor = "blue";
-    actionsContainer.style.flex = "1"; // Füllt den restlichen Platz im Container aus.
-    actionsContainer.style.padding = "5px";
-    actionsContainer.style.color = "white"; // Damit der Text gut lesbar ist.
-
-    // Füge alle Actions (ActionN, ActionR0, ...) hinzu.
-    step.actions.forEach(action => {
-      const actionElement = document.createElement("div");
-      actionElement.style.marginBottom = "4px";
-      // Darstellung: Code, Caption und der Qualifier (genau wie z. B. "A001 - START (N)")
-      actionElement.textContent = `${action.codeUid} - ${action.caption} (${action.qualifier})`;
-      actionsContainer.appendChild(actionElement);
-    });
-    segmentContainer.appendChild(actionsContainer);
-
-    // Füge den gesamten segmentierten Step dem Diagramm hinzu.
-    diagramContainer.appendChild(segmentContainer);
-  });
+    // Boolean-Bereich
+    const booleanFieldContainer = document.createElement("div");
+    booleanFieldContainer.style.height = "50px";
+    booleanFieldContainer.style.border = "1px solid #ccc";
+    booleanFieldContainer.style.padding = "8px";
+    this.buildBooleanField(booleanFieldContainer);
+    gridcontainer.appendChild(booleanFieldContainer);
 }
+
+
+  
+  
+   // Annahme: this.sfcData vom Typ SfcData ist bereits definiert und enthält beispielsweise 6 Steps.
+   private buildDiagram(diagramContainer: HTMLDivElement) {
+    // Vorherige Inhalte entfernen.
+    diagramContainer.innerHTML = "";
+
+    // Konfiguriere den Container als Flexbox mit vertikaler Ausrichtung
+    diagramContainer.style.display = "flex";
+    diagramContainer.style.flexDirection = "column"; // Vertikale Ausrichtung
+    diagramContainer.style.gap = "20px"; // Größerer Abstand zwischen den Steps
+    diagramContainer.style.padding = "10px";
+
+    // SVG-Element zur Darstellung der Pfeile vorbereiten
+    const svgOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgOverlay.style.position = "absolute";
+    svgOverlay.style.top = "0";
+    svgOverlay.style.left = "0";
+    svgOverlay.style.width = "100%";
+    svgOverlay.style.height = "100%";
+    svgOverlay.style.pointerEvents = "none"; // Damit SVG nichts blockiert
+
+    diagramContainer.style.position = "relative"; // wichtig für SVG positioning
+    diagramContainer.appendChild(svgOverlay); // später zeichnen wir hier rein
+
+
+    // Iteriere über alle Steps und erstelle ein Layout pro Step.
+    this.sfcData.steps.forEach(step => {
+        // Erstelle den roten Container (das segmentierte Layout)
+        const segmentContainer = document.createElement("div");
+        (step as any)._domElement = segmentContainer; // merken für Transition-Zeichnung
+
+        // Feste Größe für den Step-Container (Breite und Höhe)
+        segmentContainer.style.border = "2px solid red";
+        segmentContainer.style.display = "flex";
+        segmentContainer.style.flexDirection = "column";
+        segmentContainer.style.width = "200px"; // Feste Breite
+        segmentContainer.style.height = "150px"; // Feste Höhe
+
+        // Erstelle den gelben Bereich, der den Step repräsentiert.
+        const stepHeader = document.createElement("div");
+        stepHeader.style.backgroundColor = "yellow";
+        stepHeader.style.padding = "5px";
+        stepHeader.style.textAlign = "center";
+        stepHeader.style.fontWeight = "bold";
+        stepHeader.textContent = step.caption; // Hier kann auch step.uid oder eine komplexere Darstellung genutzt werden.
+        segmentContainer.appendChild(stepHeader);
+
+        // Erstelle den blauen Bereich, der die zugehörigen Actions anzeigt.
+        const actionsContainer = document.createElement("div");
+        actionsContainer.style.backgroundColor = "blue";
+        actionsContainer.style.flex = "1"; // Füllt den restlichen Platz im Container aus.
+        actionsContainer.style.padding = "5px";
+        actionsContainer.style.color = "white"; // Damit der Text gut lesbar ist.
+
+        // Füge alle Actions (ActionN, ActionR0, ...) hinzu.
+        step.actions.forEach(action => {
+            const actionElement = document.createElement("div");
+            actionElement.style.marginBottom = "4px";
+            // Darstellung: Code, Caption und der Qualifier (genau wie z. B. "A001 - START (N)")
+            actionElement.textContent = `${action.codeUid} - ${action.caption} (${action.qualifier})`;
+            actionsContainer.appendChild(actionElement);
+        });
+        segmentContainer.appendChild(actionsContainer);
+
+        // Füge den gesamten segmentierten Step dem Diagramm hinzu.
+        diagramContainer.appendChild(segmentContainer);
+
+        setTimeout(() => {
+            this.drawTransitions(svgOverlay, diagramContainer);
+        }, 0);
+    });
+}
+
+
+
+//Hilfsmethode für DRAW DELAY der  TRANSITION
+  private drawTransitions(svgOverlay: SVGSVGElement, diagramContainer: HTMLDivElement) {
+    this.sfcData.steps.forEach(step => {
+      (step.outgoingTransitions || []).forEach(transition => {
+        const fromEl = (step as any)._domElement;
+        transition.target.forEach(targetStep => {
+          const toEl = (targetStep as any)._domElement;
+          if (!fromEl || !toEl) return;
+  
+          const fromRect = fromEl.getBoundingClientRect();
+          const toRect = toEl.getBoundingClientRect();
+          const containerRect = diagramContainer.getBoundingClientRect();
+  
+          const startX = fromRect.left + fromRect.width / 2 - containerRect.left;
+          const startY = fromRect.bottom - containerRect.top;
+
+          const endX = toRect.left + toRect.width / 2 - containerRect.left;
+          const endY = toRect.top - containerRect.top;
+
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", String(startX));
+          line.setAttribute("y1", String(startY));
+          line.setAttribute("x2", String(endX));
+          line.setAttribute("y2", String(endY));
+          line.setAttribute("stroke", "black");
+          line.setAttribute("stroke-width", "5");
+          svgOverlay.appendChild(line);
+  
+          if (transition.condition && transition.condition[0]) {
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", String((startX + endX) / 2));
+            text.setAttribute("y", String((startY + endY) / 2 - 5));
+            text.setAttribute("fill", "black");
+            text.setAttribute("font-size", "12");
+            text.textContent = transition.condition[0];
+            svgOverlay.appendChild(text);
+          }
+        });
+      });
+    });
+  }
+  
+
+
+
 
     private buildBooleanField(subcontainer: HTMLDivElement) {
         //Hier werden die Booleans angezeigt und der Startzustand kann gesetzt werden.
@@ -208,6 +288,12 @@ private buildDiagram(diagramContainer: HTMLDivElement) {
 
 
 }
+
+
+
+
+
+
 
 // Annahme: Die Typen aus SfcData.ts sind bereits im Projekt verfügbar.
 // Zum Beispiel: SfcData, SfcStep, SfcAction, ActionN, ActionS0, ActionL, ActionD, ActionP, ActionSD,
