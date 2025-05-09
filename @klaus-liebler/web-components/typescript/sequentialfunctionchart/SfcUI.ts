@@ -23,12 +23,12 @@
  * 
  * =============================================================================
  */
-import { Flowchart } from "../flowchart/Flowchart";
-import { ColorNumColor2ColorDomString, EventCoordinatesInSVG, Html, Svg } from "../utils/common";
+
+import { Html } from "../utils/common";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
-import { SfcData, SfcAction, SfcOperator, SfcTransition } from "./SfcData";
+import { SfcData,SfcBooleans, SfcStep ,SfcAction,SfcTransition } from "./SfcData";
 import { IAppManagement } from "../utils/interfaces";
-import { SfcTransitionType } from "./SfcData";
+
 import { SfcCompiler } from "./SfcCompiler";
 
 
@@ -68,194 +68,21 @@ export class SfcUI {
     public RenderUi(subcontainer: HTMLDivElement) {
         if (!subcontainer) throw new Error("container is null");
         //let subcontainer = <HTMLDivElement>Html(container, "div", [], ["develop-ui"]);
-
-
+        this.sfcData = testSfcData;
+        //Erzeugt Menüleiste oben im Subcontainer
         this.buildMenu(subcontainer);
-        //Tablen aufteiltung hier machen und dann über unterfunktionen bevölkern
+        //Erzeugt den Hauptcontainer für die SFC kommt unter das Menü
+        const gridContainer = document.createElement("div");
+        this.buildGrid(gridContainer);
 
-        // Testinhalt in einem neuen div für sfc
-        const testDiv = document.createElement("div");
-        testDiv.style.display = "grid";
-        testDiv.style.gridTemplateColumns = "1fr 1fr";
-        testDiv.style.gap = "10px";
-        testDiv.style.height = "100%";
-        testDiv.style.padding = "10px";
-        testDiv.style.boxSizing = "border-box";
-
-        // Linker Bereich (z. B. Operatoren)
-        const leftGrid = document.createElement("div");
-        leftGrid.style.border = "1px solid #ccc";
-        leftGrid.style.padding = "10px";
-        leftGrid.innerHTML = "<h2>Operatoren</h2>";
-
-        // Rechter Bereich (z. B. Details, Aktionen)
-        const rightGrid = document.createElement("div");
-        rightGrid.style.border = "1px solid #ccc";
-        rightGrid.style.padding = "10px";
-        rightGrid.innerHTML = "<h2>Details / Aktionen</h2>";
-
-        testDiv.appendChild(leftGrid);
-        testDiv.appendChild(rightGrid);
-        subcontainer.appendChild(testDiv);
-
-
-        // ******************************************************
-        // Falls keine Operatoren vorhanden sind, Info anzeigen + Button
-        if (!this.sfcData.operator || this.sfcData.operator.length === 0) {
-            const emptyMessage = document.createElement("div");
-            emptyMessage.textContent = "Noch keine Operatoren vorhanden.";
-            emptyMessage.style.fontStyle = "italic";
-            emptyMessage.style.color = "#888";
-
-            const addButton = document.createElement("button");
-            addButton.textContent = "+ Ersten Operator hinzufügen";
-            addButton.style.marginTop = "10px";
-            addButton.onclick = () => {
-                // Beispieloperator erstellen
-                const newOperator: SfcOperator = {
-                    Uid: "op_" + Date.now(), // einfache eindeutige ID
-                    caption: "Neuer Startoperator",
-                    actions: [],
-                    sourceTransitions: {
-                        type: SfcTransitionType.simple, //enum SfcTransitionType
-                        source: [],
-                        sourceDone: [],
-                        target: [],
-                        condition: []
-                    },
-                    targetTransitions: {
-                        type: SfcTransitionType.simple, //enum SfcTransitionType
-                        source: [],
-                        sourceDone: [],
-                        target: [],
-                        condition: []
-                    }
-                };
-
-                // Initialisiere Operator-Array, falls nicht vorhanden
-                if (!this.sfcData.operator) {
-                    this.sfcData.operator = [];
-                }
-
-                // Neuen Operator zur Datenstruktur hinzufügen
-                this.sfcData.operator.push(newOperator);
-                //To-Do: Hier auch den Startoperator setzen
-
-                // UI neu rendern
-                subcontainer.innerHTML = ""; // Vorheriges UI löschen
-                this.RenderUi(subcontainer); // Neu aufbauen
-            };
-
-
-            leftGrid.appendChild(emptyMessage);
-            leftGrid.appendChild(addButton);
-            return; // Wichtig: Danach nicht weitermachen
-        }
-
-        // Operatoren aus den Daten anzeigen
-        this.sfcData.operator.forEach((op) => {
-            const operatorBlock = document.createElement("div");
-            operatorBlock.style.border = "1px solid #000";
-            operatorBlock.style.padding = "8px";
-            operatorBlock.style.marginBottom = "10px";
-            operatorBlock.style.position = "relative";
-            operatorBlock.style.backgroundColor = "#f9f9f9";
-            operatorBlock.style.borderRadius = "5px";
-
-            // Caption
-            const caption = document.createElement("div");
-            caption.textContent = op.caption;
-            caption.style.fontWeight = "bold";
-            operatorBlock.appendChild(caption);
-
-            // Richtungsbuttons
-            const directions = ["↑", "→", "↓", "←"];
-            const directionWrapper = document.createElement("div");
-            directionWrapper.style.display = "flex";
-            directionWrapper.style.gap = "5px";
-            directionWrapper.style.marginTop = "5px";
-
-            directions.forEach((dir) => {
-                const btn = document.createElement("button");
-                btn.textContent = dir;
-                btn.title = `Füge Operator ${dir} hinzu`;
-                btn.style.padding = "2px 5px";
-                btn.style.fontSize = "12px";
-                btn.style.cursor = "pointer";
-
-                btn.onclick = () => {
-                    const newOp: SfcOperator = {
-                        Uid: "op_" + Date.now(),
-                        caption: `Neu (${dir})`,
-                        actions: [],
-                        sourceTransitions: {
-                            type: SfcTransitionType.simple, //enum SfcTransitionType
-                            source: [],
-                            sourceDone: [],
-                            target: [],
-                            condition: []
-                        },
-                        targetTransitions: {
-                            type: SfcTransitionType.simple, //enum SfcTransitionType
-                            source: [],
-                            sourceDone: [],
-                            target: [],
-                            condition: []
-                        }
-                    };
-
-                    // Neue Transition zwischen aktuellem und neuem Operator
-                    const newTransition: SfcTransition = {
-                        type: SfcTransitionType.simple, //enum SfcTransitionType
-                        source: [op],
-                        sourceDone: [false],
-                        target: [newOp],
-                        condition: ["true"]
-                    };
-
-                    // Verbindung hinzufügen
-                    op.targetTransitions = newTransition;
-                    newOp.sourceTransitions = newTransition;
-
-                    // Zur Datenstruktur hinzufügen
-                    this.sfcData.operator.push(newOp);
-
-                    // Neu rendern
-                    subcontainer.innerHTML = "";
-                    this.RenderUi(subcontainer);
-                };
-
-                directionWrapper.appendChild(btn);
-            });
-
-
-            operatorBlock.appendChild(directionWrapper);
-            leftGrid.appendChild(operatorBlock);
-        });
+        subcontainer.appendChild(gridContainer);
+    
     }
 
+    //To-Do: SFC HttpL Request Funktion schreiben und in Menü integrieren
     private async postSfcData() {
         try {
-            // Kompiliere die SfcData in JSON
-            const jsonData = this.compiler.Compile(this.sfcData);
-    
-            // Sende die JSON-Daten an den Plugin-Server
-            //To-Do: Fetch wird abgebrochenb, weil das Zertifikat von dem plugin punkt nicht akzeptiert wird.
-            //       DAs muss iwie umgangen werden.            
-            const response = await fetch("http://localhost:8090/sfc-data", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: jsonData,
-            });
-    
-            if (response.ok) {
-                const responseData = await response.json();
-                console.log("SfcData erfolgreich gesendet:", responseData);
-            } else {
-                console.error("Fehler beim Senden der SfcData:", response.statusText);
-            }
+            //Hier immplementieren
         } catch (error) {
             console.error("Fehler in postSfcData:", error);
         }
@@ -291,6 +118,85 @@ export class SfcUI {
         );
         mm.Render(subcontainer)
     }
+    private buildGrid(gridcontainer: HTMLDivElement) {
+        // Setze den Subcontainer auf Flexbox mit horizontaler Ausrichtung
+        gridcontainer.style.display = "flex";
+        gridcontainer.style.flexDirection = "row"; // Horizontal ausgerichtet
+        gridcontainer.style.height = "100%";
+        gridcontainer.style.width = "100%";
+    
+        // Erstelle Diagram-Bereich (2/3 der Breite)
+        const diagramContainer = document.createElement("div");
+        diagramContainer.style.flex = "2"; // 2/3 der Breite
+        diagramContainer.style.border = "1px solid #ccc"; // Optional: Rahmen für Sichtbarkeit
+        diagramContainer.style.height = "100%"; // Volle Höhe
+        this.buildDiagram(diagramContainer);
+        gridcontainer.appendChild(diagramContainer);
+    
+        // Erstelle BooleanField-Bereich (1/3 der Breite)
+        const booleanFieldContainer = document.createElement("div");
+        booleanFieldContainer.style.flex = "1"; // 1/3 der Breite
+        booleanFieldContainer.style.border = "1px solid #ccc"; // Optional: Rahmen für Sichtbarkeit
+        booleanFieldContainer.style.height = "100%"; // Volle Höhe
+        this.buildBooleanField(booleanFieldContainer);
+        gridcontainer.appendChild(booleanFieldContainer);
+    }
+   // Annahme: this.sfcData vom Typ SfcData ist bereits definiert und enthält beispielsweise 6 Steps.
+private buildDiagram(diagramContainer: HTMLDivElement) {
+  // Vorherige Inhalte entfernen.
+  diagramContainer.innerHTML = "";
+
+  // Konfiguriere den Container als Grid mit 3 Spalten (ergibt 6 Felder, wenn 6 Steps vorhanden sind)
+  diagramContainer.style.display = "grid";
+  diagramContainer.style.gridTemplateColumns = "repeat(3, 1fr)";
+  diagramContainer.style.gap = "10px";
+  diagramContainer.style.padding = "10px";
+
+  // Iteriere über alle Steps und erstelle ein Layout pro Step.
+  this.sfcData.steps.forEach(step => {
+    // Erstelle den roten Container (das segmentierte Layout)
+    const segmentContainer = document.createElement("div");
+    segmentContainer.style.border = "2px solid red";
+    segmentContainer.style.display = "flex";
+    segmentContainer.style.flexDirection = "column";
+    segmentContainer.style.height = "150px"; // Feste Höhe – kann je nach Wunsch angepasst werden.
+
+    // Erstelle den gelben Bereich, der den Step repräsentiert.
+    const stepHeader = document.createElement("div");
+    stepHeader.style.backgroundColor = "yellow";
+    stepHeader.style.padding = "5px";
+    stepHeader.style.textAlign = "center";
+    stepHeader.style.fontWeight = "bold";
+    stepHeader.textContent = step.caption; // Hier kann auch step.uid oder eine komplexere Darstellung genutzt werden.
+    segmentContainer.appendChild(stepHeader);
+
+    // Erstelle den blauen Bereich, der die zugehörigen Actions anzeigt.
+    const actionsContainer = document.createElement("div");
+    actionsContainer.style.backgroundColor = "blue";
+    actionsContainer.style.flex = "1"; // Füllt den restlichen Platz im Container aus.
+    actionsContainer.style.padding = "5px";
+    actionsContainer.style.color = "white"; // Damit der Text gut lesbar ist.
+
+    // Füge alle Actions (ActionN, ActionR0, ...) hinzu.
+    step.actions.forEach(action => {
+      const actionElement = document.createElement("div");
+      actionElement.style.marginBottom = "4px";
+      // Darstellung: Code, Caption und der Qualifier (genau wie z. B. "A001 - START (N)")
+      actionElement.textContent = `${action.codeUid} - ${action.caption} (${action.qualifier})`;
+      actionsContainer.appendChild(actionElement);
+    });
+    segmentContainer.appendChild(actionsContainer);
+
+    // Füge den gesamten segmentierten Step dem Diagramm hinzu.
+    diagramContainer.appendChild(segmentContainer);
+  });
+}
+
+    private buildBooleanField(subcontainer: HTMLDivElement) {
+        //Hier werden die Booleans angezeigt und der Startzustand kann gesetzt werden.
+    }
+
+
 
     constructor(private appManagement: IAppManagement, private sfcData: SfcData, private sfcCallbacks: SfcCallback, private options: SfcOptions) {
         if (!this.sfcData) throw new Error("sfcData is null");
@@ -300,6 +206,121 @@ export class SfcUI {
         this.compiler = new SfcCompiler();
     }
 
-    //To-Do: SFC HttpL Request Funktion schrieben und in Menü integrieren
 
 }
+
+// Annahme: Die Typen aus SfcData.ts sind bereits im Projekt verfügbar.
+// Zum Beispiel: SfcData, SfcStep, SfcAction, ActionN, ActionS0, ActionL, ActionD, ActionP, ActionSD,
+// BaseTransition, TransitionSimple, etc.
+
+// Erstelle zunächst die einzelnen Schritte (Steps)
+
+// Schritt 1: Start-Step
+const step1: SfcStep = {
+  uid: "step1",
+  caption: "Start Step",
+  actions: [
+    { 
+      codeUid: "A001", 
+      caption: "Activate Motor", 
+      targetBoolean: "redLed", 
+      qualifier: "N"  // ActionN
+    } as SfcAction,
+    { 
+      codeUid: "A002", 
+      caption: "Initialize Sensors", 
+      targetBoolean: "yellowLed", 
+      qualifier: "S0"  // ActionS0
+    } as SfcAction,
+  ],
+  outgoingTransitions: [], // Wird im Folgenden ergänzt
+  // incomingTransitions bleibt leer, da dies der erste Step ist
+};
+
+// Schritt 2: Intermediate Step
+const step2: SfcStep = {
+  uid: "step2",
+  caption: "Intermediate Step",
+  actions: [
+    { 
+      codeUid: "A003", 
+      caption: "Check Temperature", 
+      targetBoolean: "greenLed", 
+      qualifier: "L"   // ActionL
+    } as SfcAction,
+    { 
+      codeUid: "A004", 
+      caption: "Delay Process", 
+      targetBoolean: "merk1", 
+      qualifier: "D"   // ActionD
+    } as SfcAction,
+  ],
+  outgoingTransitions: [],
+  incomingTransitions: [],
+};
+
+// Schritt 3: Final Step
+const step3: SfcStep = {
+  uid: "step3",
+  caption: "Final Step",
+  actions: [
+    { 
+      codeUid: "A005", 
+      caption: "Stop Process", 
+      targetBoolean: "merk2", 
+      qualifier: "P"   // ActionP
+    } as SfcAction,
+    { 
+      codeUid: "A006", 
+      caption: "Reset Alarms", 
+      targetBoolean: "merk3", 
+      qualifier: "SD"  // ActionSD
+    } as SfcAction,
+  ],
+  outgoingTransitions: [],
+  incomingTransitions: [],
+};
+
+// Erstelle nun Transitionen zwischen den Steps:
+// Übergang von Step 1 zu Step 2
+const transition1: SfcTransition = {
+  type: "simple",
+  source: [step1],
+  sourceDone: [true], // Beispielwert: "Step1" ist abgeschlossen, um die Transition auszulösen.
+  target: [step2],
+  condition: ["Motor active"] // Beispielhafte Bedingung
+};
+
+// Übergang von Step 2 zu Step 3
+const transition2: SfcTransition = {
+  type: "simple",
+  source: [step2],
+  sourceDone: [false], // Beispielwert
+  target: [step3],
+  condition: ["Temperature optimal"]
+};
+
+// Weisen die Transitionen den entsprechenden Steps zu:
+step1.outgoingTransitions.push(transition1);
+step2.incomingTransitions!.push(transition1);
+step2.outgoingTransitions.push(transition2);
+step3.incomingTransitions!.push(transition2);
+
+// Erstelle abschließend den vollständigen SFC-Datencontainer
+const testSfcData: SfcData = {
+  start: step1,
+  steps: [step1, step2, step3],
+  booleans: {
+    redLed: false,
+    yellowLed: false,
+    greenLed: false,
+    merk1: false,
+    merk2: false,
+    merk3: false,
+    merk4: false,
+  },
+};
+
+// TestSfcData enthält nun 3 aufeinanderfolgende Steps,
+// wobei jeder Step mindestens 2 Actions besitzt und Transitionen definiert sind.
+console.log(testSfcData);

@@ -1,65 +1,121 @@
 /**
  * =============================================================================
  * @file        SfcData.ts
- * @description Datenstruktur für den Sequential Function Chart (SFC).
- * 
- * @author      Felix Lukowski, Jan Heitmeier
+ * @description Datenstruktur für den Sequential Function Chart (SFC) unter
+ *              Anwendung von (Discriminated Union / Vererbung).
+ * @authors     Felix Lukowski, Jan Heitmeier
  * @created     2025-04-25
- * @version     1.0.0
- * 
+ * @version     1.0.1
  * =============================================================================
  */
 
-export interface SfcData {    
-    start: SfcOperator; //Start operator of the chart
-    operator : SfcOperator[];
-    booleans: SfcBooleans; //List of boolean actions
+/* Gesamtstruktur des SFC */
+export interface SfcData {
+  start: SfcStep;
+  steps: SfcStep[];
+  booleans: SfcBooleans;
 }
 
-export interface SfcBooleans{
-    redLed: boolean; //Value of the boolean
-    yellowLed: boolean; //Value of the boolean
-    greenLed: boolean; //Value of the boolean
+/* Definition der Booleans, z. B. für LED-Steuerungen oder Merker */
+export interface SfcBooleans {
+  redLed: boolean;
+  yellowLed: boolean;
+  greenLed: boolean;
+  merk1: boolean;
+  merk2: boolean;
+  merk3: boolean;
+  merk4: boolean;
 }
 
-export interface SfcOperator {
-    Uid: string; // Unique identifier of the operator
-    caption: string; //Caption of the operator
-    actions: SfcAction[];
-    sourceTransitions: SfcTransition; 
-    targetTransitions: SfcTransition; 
+/* Repräsentation einzelner Schritte im SFC */
+export interface SfcStep {
+  uid: string;                        // Eindeutiger Bezeichner
+  caption: string;                    // Beschriftung des Schritts
+  actions: SfcAction[];               // Aktionen, die in diesem Schritt ausgeführt werden
+  outgoingTransitions: SfcTransition[]; // Übergänge, die von diesem Schritt ausgehen
+  incomingTransitions?: SfcTransition[];  // Übergänge, die in diesen Schritt hineinführen
 }
 
-export interface SfcAction {
-    qualifier: SfcQualifier; //NQualifizierer, siehe SFC-Standard.
-    codeUid: string; // Unique identifier of the action
-    hardwareBooleanName: string; //Name of the hardware boolean that is manipulated by the action
-    hardwareBoolean: boolean; //Boolean value that is manipulated by the action
-}
-//Qualifizierer, siehe SFC-Standard.
-enum SfcQualifier {
-    N = "N", // Die Aktion ist aktiv, solange der Schritt aktiv ist.
-    R0 = "R0", // Reset überschreiben: Die Aktion wird deaktiviert.
-    S0 = "S0", // Festgelegt (gespeichert): Aktion startet bei Aktivierung des Schritts und bleibt bis zum Reset aktiv.
-    L = "L", // Begrenzte Zeit: Aktion läuft, bis der Schritt inaktiv ist oder die Zeit abläuft.
-    D = "D", // Verzögerte Zeit: Aktion startet nach Verzögerung, wenn der Schritt aktiv bleibt.
-    P = "P", // Impuls: Aktion wird einmal bei Aktivierung/Deaktivierung des Schritts ausgeführt.
-    SD = "SD", // Gespeichert und verzögerte Zeit: Aktion startet nach Verzögerung und bleibt bis zum Reset aktiv.
-    DS = "DS", // Verzögert und gespeichert: Aktion startet nach Verzögerung und bleibt bis zum Reset aktiv.
-    SL = "SL" // Gespeichert und begrenzte Zeit: Aktion läuft für eine Zeit oder bis zum Reset.
+export interface BaseAction {
+  codeUid: string;      // Eindeutiger Identifikator der Aktion
+  caption: string;      // Beschriftung der Aktion
+  targetBoolean: string; // Name des Booleans, der manipuliert wird
 }
 
-export interface SfcTransition {
-    type: SfcTransitionType; //Type of the transition (simple, joiner, splitter)
-    source: SfcOperator[]; //Menge der Operatoren, die die Transition auslösen können
-    sourceDone: boolean []; //Array of booleans indicating if the source operator is done
-    target: SfcOperator[]; //
-    condition: string[]; //Boolean condition
+export interface ActionN extends BaseAction {
+  qualifier: "N";
 }
 
-export enum SfcTransitionType {
-    simple = "simple", //Simple transition with one source and one target
-    joiner = "joiner", //Joiner transition with multiple sources and one target
-    splitter_simultan = "splitter_simultan", //Splitter transition with one source and multiple targets
-    splitter_alternativ = "splitter_alternativ", //Splitter transition with one source and multiple targets
+export interface ActionR0 extends BaseAction {
+  qualifier: "R0";
 }
+
+export interface ActionS0 extends BaseAction {
+  qualifier: "S0";
+}
+
+export interface ActionL extends BaseAction {
+  qualifier: "L";
+}
+
+export interface ActionD extends BaseAction {
+  qualifier: "D";
+}
+
+export interface ActionP extends BaseAction {
+  qualifier: "P";
+}
+
+export interface ActionSD extends BaseAction {
+  qualifier: "SD";
+}
+
+export interface ActionDS extends BaseAction {
+  qualifier: "DS";
+}
+
+export interface ActionSL extends BaseAction {
+  qualifier: "SL";
+}
+
+export type SfcAction =
+  | ActionN
+  | ActionR0
+  | ActionS0
+  | ActionL
+  | ActionD
+  | ActionP
+  | ActionSD
+  | ActionDS
+  | ActionSL;
+
+
+export interface BaseTransition {
+  source: SfcStep[];      // Schritte, die den Transition auslösen
+  sourceDone: boolean[];  // Array, das anzeigt, ob die Quellen abgeschlossen sind
+  target: SfcStep[];      // Zielschritte der Transition
+  condition: string[];    // Liste logischer Bedingungen
+}
+
+export interface TransitionSimple extends BaseTransition {
+  type: "simple";
+}
+
+export interface TransitionJoiner extends BaseTransition {
+  type: "joiner";
+  // Zusätzliche transitionsspezifische Properties können hier ergänzt werden.
+}
+
+export interface TransitionSplitterSimultan extends BaseTransition {
+  type: "splitter_simultan";
+}
+
+export interface TransitionSplitterAlternativ extends BaseTransition {
+  type: "splitter_alternativ";
+}
+
+export type SfcTransition =
+  | TransitionSimple
+  | TransitionJoiner
+  | TransitionSplitterSimultan
+  | TransitionSplitterAlternativ;

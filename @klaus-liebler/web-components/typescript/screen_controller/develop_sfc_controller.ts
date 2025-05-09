@@ -40,7 +40,7 @@ export class DevelopSFCController extends ScreenController {
    //To-Do : Datenklassen anpassen an SfcData und Manager
   constructor(appManagement:IAppManagement, httpServerPrexix="") {
         super(appManagement);
-        let data: SfcData = {start:null,operator:[],booleans: <SfcBooleans>{redLed:false,yellowLed:false,greenLed:false}};
+        let data: SfcData = {start:null,steps:[],booleans: null};
         let options = new SfcOptions(httpServerPrexix);
         let callbacks = new SfcCallback();
         this.sfcui = new SfcUI(this.appManagement, data, callbacks, options);
