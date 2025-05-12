@@ -20,12 +20,13 @@ export class DevelopSFCController extends ScreenController {
     }
 
     OnFirstStart(): void {
-        //To-Do : ENums für verschiedene Modi in SfcUi Einführen.
-       // this.timer = window.setInterval(() => { this.fc.TriggerDebug();}, 1000);
-        this.sfcui.RenderUi(this.mainDiv.value!);
-
+        // Now we don't need to pass the container each time
+        // Just set it once when the element is available
+        if (this.mainDiv.value && !this.sfcui["container"]) { // Access internal property
+            this.sfcui.setContainer(this.mainDiv.value as HTMLDivElement);
+        }
+        this.sfcui.RenderUI(); // No need to pass container
     }
-
     OnRestart(): void {
         this.OnFirstStart()
     }

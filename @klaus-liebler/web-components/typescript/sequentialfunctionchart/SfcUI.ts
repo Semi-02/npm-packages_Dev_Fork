@@ -56,17 +56,28 @@ export class SfcCallback {
   onOperatorMoved?: (operatorId: string, position: number) => void;
   onAfterChange?: (changeType: any) => void;
 }
-
 export class SfcUI {
   private compiler: SfcCompiler;
+  private container?: HTMLDivElement; // Store the container reference
 
-  constructor(private appManagement: IAppManagement, private sfcData: SfcData, private sfcCallbacks: SfcCallback, private options: SfcOptions) {
+  constructor(
+    private appManagement: IAppManagement,
+    private sfcData: SfcData,
+    private sfcCallbacks: SfcCallback,
+    private options: SfcOptions,
+    container?: HTMLDivElement // Optional container parameter
+  ) {
     if (!this.sfcData) throw new Error("sfcData is null");
     if (!this.sfcCallbacks) throw new Error("sfcCallbacks is null");
     if (!this.options) throw new Error("options is null");
     if (!this.appManagement) throw new Error("appManagement is null");
     this.compiler = new SfcCompiler();
-    //this.dataManager = new SfcDataManager(sfcData, sfcCallbacks, options);
+    this.container = container; // Store the container reference if provided
+  }
+
+  // Ability to set container later if not provided in constructor
+  public setContainer(container: HTMLDivElement): void {
+    this.container = container;
   }
   // Temporäre Methode
   public loadTestData() {
@@ -75,20 +86,25 @@ export class SfcUI {
     console.log("Test data loaded");
   }
 
-  public RenderUi(subcontainer: HTMLDivElement) {
-  if (!subcontainer) throw new Error("subcontainer is null");  // Fixed to check for null
-  this.loadTestData();
+  // RenderUI now uses the stored container if no parameter is provided
+  public RenderUI(subcontainer?: HTMLDivElement): void {
+    // Use provided subcontainer or fall back to stored container
+    const targetContainer = subcontainer || this.container;
 
+    // Check if we have a valid container
+    if (!targetContainer) throw new Error("No container available for rendering");
+
+    // The rest of your rendering logic
     if (!this.sfcData) throw new Error("sfcData is null");
 
     // Clear previous content
-    subcontainer.innerHTML = "";
+    targetContainer.innerHTML = "";
 
     // Create the menu at the top of the subcontainer
-    this.buildMenu(subcontainer);
+    this.buildMenu(targetContainer);
 
     // Create the main container for the SFC below the menu
-    const gridContainer = Html(subcontainer, "div", [], ["grid-container"], undefined, {
+    const gridContainer = Html(targetContainer, "div", [], ["grid-container"], undefined, {
       display: "flex",
       flexDirection: "column",
       flex: "1",
@@ -122,6 +138,11 @@ export class SfcUI {
           new MenuItem("☭ Start Debug", () => this.postSfcData()),
           new MenuItem("× Stop Debug", () => null),
           new MenuItem("👣 Set as Startup-App", () => null),
+          new MenuItem("🧪 Load Test Data", () => {
+            this.loadTestData();
+            this.RenderUI(); // Re-render with test data
+          }),
+
         ]),
         new Menu("Simulation", [
           new MenuItem("➤ Start Simulation", () => null),
@@ -182,7 +203,7 @@ export class SfcUI {
     this.buildStepsRecursively(stepsGridContainer, [this.sfcData.start], 0, new Set());
   }
 
-    private buildStepsRecursively(
+  private buildStepsRecursively(
     container: HTMLElement,
     steps: SfcStep[],
     level: number,
@@ -190,30 +211,30 @@ export class SfcUI {
   ) {
     // Track next level steps
     const nextLevelSteps: SfcStep[] = [];
-    
+
     // Process each step at this level
     steps.forEach((step, index) => {
       // Skip if already visited (prevents cycles)
       if (visitedSteps.has(step.uid)) return;
       visitedSteps.add(step.uid);
-      
+
       // Build the step UI directly in the grid container
       const stepElement = this.buildStep(container, step);
-      
+
       // Position the step in the grid
       // Row is determined by level (vertical position)
       // Column is determined by index within current level (horizontal position)
       stepElement.style.gridRow = `${level + 1}`;
-      stepElement.style.gridColumn = `${index + 1}`; 
-      
+      stepElement.style.gridColumn = `${index + 1}`;
+
       // Add margin for spacing and better visual hierarchy
       stepElement.style.margin = "10px";
       stepElement.style.width = "500px"; // Fixed width for consistency
-      
+
       // Store DOM reference for drawing transitions
       (step as any)._domElement = stepElement;
       (step as any)._gridPosition = { row: level + 1, column: index + 1 };
-      
+
       // Collect next level steps from transitions
       if (step.outgoingTransitions && step.outgoingTransitions.length > 0) {
         step.outgoingTransitions.forEach(transition => {
@@ -227,7 +248,7 @@ export class SfcUI {
         });
       }
     });
-    
+
     // Process next level if any
     if (nextLevelSteps.length > 0) {
       this.buildStepsRecursively(container, nextLevelSteps, level + 1, visitedSteps);
@@ -290,7 +311,7 @@ export class SfcUI {
       overflow: "hidden", // Prevent overflow issues
       boxSizing: "border-box" // Ensure border is included in width calculation
     });
-    
+
     // Create actions table that fills the whole action area
     const actionsTable = Html(actionsArea, "table", [], ["actions-table"], undefined, {
       width: "100%", // Take full width
@@ -299,12 +320,12 @@ export class SfcUI {
       margin: "0",
       boxSizing: "border-box"
     });
-    
+
     // Set up the column groups to control column widths
     const colGroup = Html(actionsTable, "colgroup", [], []);
     Html(colGroup, "col", [], [], undefined, { width: "40%" }); // Qualifier column - 2/5
     Html(colGroup, "col", [], [], undefined, { width: "60%" }); // Action column - 3/5
-    
+
     const tableHead = Html(actionsTable, "thead", [], []);
     const headRow = Html(tableHead, "tr", [], []);
     Html(headRow, "th", [], [], "Qualifier", {
@@ -329,18 +350,18 @@ export class SfcUI {
       fontWeight: "normal",
       fontSize: "0.9em"
     });
-    
+
     const tableBody = Html(actionsTable, "tbody", [], []);
     step.actions.forEach(action => {
       const actionRow = Html(tableBody, "tr", [], []);
-      Html(actionRow, "td", [], [], action.qualifier, { 
+      Html(actionRow, "td", [], [], action.qualifier, {
         padding: "4px",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
         boxSizing: "border-box"
       });
-      Html(actionRow, "td", [], [], action.caption, { 
+      Html(actionRow, "td", [], [], action.caption, {
         padding: "4px",
         overflow: "hidden",
         textOverflow: "ellipsis",
