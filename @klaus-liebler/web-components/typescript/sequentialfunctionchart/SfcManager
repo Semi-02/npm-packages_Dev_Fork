@@ -1,0 +1,5 @@
+
+ //Im Manager : 
+  // SfcUi für Anzeige und Interaktion
+  // SfcData für die Daten
+  // SfcCompiler zum Verpakcne der Daten fürs absenden an die Platine  
