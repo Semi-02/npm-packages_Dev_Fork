@@ -28,6 +28,7 @@ import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcBooleans, SfcStep, SfcAction, SfcTransition } from "./SfcData";
 import { IAppManagement } from "../utils/interfaces";
 import { SfcCompiler } from "./SfcCompiler";
+import "../../style/sfcui.css";
 
 export class SfcOptions {
   canUserEditLinks: boolean = true;
@@ -309,8 +310,13 @@ export class SfcUI {
       borderRadius: "4px",
       padding: "0",  // Remove padding to maximize table space
       overflow: "hidden", // Prevent overflow issues
-      boxSizing: "border-box" // Ensure border is included in width calculation
+      boxSizing: "border-box"
     });
+
+
+    // Add hover button to actions area
+    this.addHoverButtonToStepActions(actionsArea);
+
 
     // Create actions table that fills the whole action area
     const actionsTable = Html(actionsArea, "table", [], ["actions-table"], undefined, {
@@ -483,6 +489,51 @@ export class SfcUI {
       });
     }
   }
+
+
+  //Hilfsmethode um den Hover-Button zu erstellen
+
+  private addHoverButtonToStepActions(stepActionsContainer: HTMLElement): void {
+  // Create the button element
+  const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add", {
+    display: "none", // Initially hidden
+    position: "absolute",
+    top: "50%",
+    right: "10px",
+    transform: "translateY(-50%)",
+    padding: "6px 12px",
+    backgroundColor: "#007bff",
+    color: "#fff",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+    zIndex: "10",
+  });
+
+  // Add click event listener to the button
+  hoverButton.addEventListener("click", () => {
+    alert("funktioniert");
+  });
+
+  // Show the button when hovering over the container or the button itself
+  const showButton = () => {
+    hoverButton.style.display = "block";
+  };
+
+  // Hide the button when leaving both the container and the button
+  const hideButton = (event: MouseEvent) => {
+    const relatedTarget = event.relatedTarget as HTMLElement;
+    if (!stepActionsContainer.contains(relatedTarget) && relatedTarget !== hoverButton) {
+      hoverButton.style.display = "none";
+    }
+  };
+
+  // Add event listeners to the container and button
+  stepActionsContainer.addEventListener("mouseenter", showButton);
+  stepActionsContainer.addEventListener("mouseleave", hideButton);
+  hoverButton.addEventListener("mouseenter", showButton);
+  hoverButton.addEventListener("mouseleave", hideButton);
+}
 }
 
 // Annahme: Die Typen aus SfcData.ts sind bereits im Projekt verfügbar.
