@@ -510,7 +510,8 @@ export class SfcUI {
     zIndex: "10",
   });
 
-  // Add click event listener to the button
+  // TODO: Add functionality to the button also die konkrete ergänzung für neue steps container die mit daten oder erst 
+  //platzhalter shit gefüllt werden
   hoverButton.addEventListener("click", () => {
     alert("funktioniert");
   });
