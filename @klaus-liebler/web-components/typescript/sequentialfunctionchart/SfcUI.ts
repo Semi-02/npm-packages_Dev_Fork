@@ -1,28 +1,71 @@
 /**
  * =============================================================================
  * @file        SfcUI.ts
- * @description Zentrale Klasse zur Verarbeitung von Nutzerdaten.
- *              Implementiert Geschäftslogik für das Auth-Modul.
+ * @description Zentrale Klasse zur Verarbeitung von Nutzerdaten und Darstellung
+ *              der Sequential Function Chart (SFC)-Benutzeroberfläche.
+ *              Implementiert Geschäftslogik für das Auth-Modul und UI-Rendering.
  * 
- * @author      Felix Lukowski, Jan Heitmeier
+ * @authors     Felix Lukowski, Jan Heitmeier
  * @created     2025-04-25
- * @version     1.0.0
+ * @version     1.1.0
  * 
  * @methods
- *    - constructor(config: Config): void
+ *    - constructor(config: Config): 
  *        Initialisiert die Klasse mit der gegebenen Konfiguration.
  * 
- *    - validateUserInput(user: UserInput, strict: boolean): ValidationResult
- *        Führt Validierungen auf Nutzerdaten durch.
+ *    - setContainer(container: HTMLDivElement): 
+ *        Setzt den Container für das UI-Rendering, falls dieser nicht im
+ *        Konstruktor übergeben wurde.
  * 
- *    - authenticate(token: string): Promise<User>
- *        Authentifiziert den Benutzer über ein JWT.
+ *    - loadTestData(): 
+ *        Lädt Testdaten in die SFC-Datenstruktur und gibt eine Bestätigung
+ *        in der Konsole aus.
  * 
- *    - reset(): void
- *        Setzt den internen Zustand zurück.
+ *    - RenderUI(subcontainer?: HTMLDivElement): 
+ *        Rendert die Benutzeroberfläche in den angegebenen oder gespeicherten
+ *        Container. Erstellt Menü, Diagramm und Boolesche Felder.
+ * 
+ *    - postSfcData(): 
+ *         Sendet die aktuellen SFC-Daten an einen Server. Fehler werden
+ *        in der Konsole protokolliert.
+ * 
+ *    - buildMenu(subcontainer: HTMLDivElement): 
+ *         Erstellt das Hauptmenü mit Optionen für Dateioperationen,
+ *        Debugging und Simulation.
+ * 
+ *    - buildView(gridcontainer: HTMLElement): 
+ *         Erstellt die Hauptansicht mit einem zweispaltigen Layout:
+ *        Diagramm auf der linken Seite und Boolesche Felder auf der rechten Seite.
+ * 
+ *    - buildDiagram(diagramContainer: HTMLElement): 
+ *         Baut das SFC-Diagramm basierend auf den aktuellen SFC-Daten.
+ * 
+ *    - buildStepsRecursively(
+ *          container: HTMLElement,
+ *          steps: SfcStep[],
+ *          level: number,
+ *          visitedSteps: Set<string>
+ *      ): 
+ *         Rekursive Methode zum Aufbau der SFC-Schritte und deren
+ *        Positionierung im Diagramm.
+ * 
+ *    - buildStep(container: HTMLElement, step: SfcStep): 
+ *         Erstellt die Darstellung eines einzelnen SFC-Schritts und
+ *        gibt das DOM-Element zurück.
+ * 
+ *    - buildBooleanField(container: HTMLElement): 
+ *         Erstellt die Ansicht für die Booleschen Felder und ermöglicht
+ *        deren Bearbeitung.
+ * 
+ *    - addHoverButtonToStepActions(stepActionsContainer: HTMLElement): 
+ *         Fügt einen Hover-Button hinzu, um neue Schritte in das Diagramm
+ *        einzufügen.
  * 
  * =============================================================================
  */
+
+
+
 import { Html } from "../utils/common";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { SfcData, SfcBooleans, SfcStep, SfcAction, SfcTransition } from "./SfcData";
