@@ -308,8 +308,9 @@ export class SfcUI {
       width: "60%",
       border: "2px solid #333",
       borderRadius: "4px",
-      padding: "0",  // Remove padding to maximize table space
-      overflow: "hidden", // Prevent overflow issues
+      padding: "0",  
+      overflowY: "auto", // Enable vertical scrolling
+      maxHeight: "150px", // Set a maximum height for the scrollable area
       boxSizing: "border-box"
     });
 
