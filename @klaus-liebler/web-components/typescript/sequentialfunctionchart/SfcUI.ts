@@ -229,7 +229,7 @@ export class SfcUI {
       stepElement.style.gridColumn = `${index + 1}`;
 
       // Add margin for spacing and better visual hierarchy
-      stepElement.style.margin = "10px";
+      stepElement.style.margin = "0px";
       stepElement.style.width = "500px"; // Fixed width for consistency
 
       // Store DOM reference for drawing transitions
@@ -493,7 +493,7 @@ export class SfcUI {
 
   //Hilfsmethode um den Hover-Button zu erstellen
 
-  private addHoverButtonToStepActions(stepActionsContainer: HTMLElement): void {
+private addHoverButtonToStepActions(stepActionsContainer: HTMLElement): void {
   // Create the button element
   const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add", {
     display: "none", // Initially hidden
@@ -510,10 +510,41 @@ export class SfcUI {
     zIndex: "10",
   });
 
-  // TODO: Add functionality to the button also die konkrete ergänzung für neue steps container die mit daten oder erst 
-  //platzhalter shit gefüllt werden
+  // Add functionality to create a new step and append it to the grid
   hoverButton.addEventListener("click", () => {
-    alert("funktioniert");
+    // Create a new step object (similar to SfcStep)
+    const newStep: SfcStep = {
+      uid: `step-${Date.now()}`, // Unique ID based on timestamp
+      caption: "New Step",
+      actions: [
+        {
+          codeUid: `A-${Date.now()}`,
+          caption: "New Action",
+          targetBoolean: "newBoolean",
+          qualifier: "N",
+        } as SfcAction,
+      ],
+      outgoingTransitions: [],
+      incomingTransitions: [],
+    };
+
+    // Add the new step to the SFC data
+    this.sfcData.steps.push(newStep);
+
+    // Find the grid container (steps-grid-container)
+    const stepsGridContainer = stepActionsContainer.closest(".steps-grid-container") as HTMLElement;
+    if (!stepsGridContainer) {
+      console.error("Steps grid container not found");
+      return;
+    }
+
+    // Build the new step and append it to the grid
+    const newStepElement = this.buildStep(stepsGridContainer, newStep);
+
+    // Position the new step at the bottom of the grid
+    const totalSteps = this.sfcData.steps.length;
+    newStepElement.style.gridRow = `${totalSteps}`; // Place it in the next available row
+    newStepElement.style.gridColumn = `1`; // Always in the first column for simplicity
   });
 
   // Show the button when hovering over the container or the button itself
