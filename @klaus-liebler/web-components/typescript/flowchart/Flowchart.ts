@@ -98,6 +98,10 @@ export class Flowchart {
     get SelectedLink() { return this.selectedLink };
     get Options() { return this.options; }
 
+    private zoomLevel: number = 1.0;
+    private scalingLayer!: SVGGElement;
+
+
     private positionRatio: number = 1;
     get PositionRatio() { return this.positionRatio; }
 
@@ -484,6 +488,7 @@ export class Flowchart {
         }
         var mm:MenuManager=new MenuManager(
             [
+            
                 new Menu("File", [
                     new MenuItem("📂 Open (Local)", ()=>fileInput.click()),
                     new MenuItem("📂 Open (labathome)", ()=>this.getFbdFileList(FBDSTORE_BASE_DIRECTORY)),
@@ -541,6 +546,29 @@ export class Flowchart {
         this.links.forEach(l=>l.UnsetColor())
     }
 
+    public ZoomIn() {
+        this.zoomLevel *= 1.1; // z.B. +10%
+        this.applyZoom();
+    }
+    
+    public ZoomOut() {
+        this.zoomLevel /= 1.1; // z.B. -10%
+        this.applyZoom();
+    }
+    
+    private applyZoom() {
+        this.scalingLayer.setAttribute("transform", `scale(${this.zoomLevel})`);
+        this.positionRatio = this.zoomLevel;
+    
+        // Dynamisch SVG-Größe anpassen – damit scrollbars erscheinen!
+       /* const baseWidth = 2000;
+        const baseHeight = 1000;
+        this.flowchartContainerSvgSvg.setAttribute("width", `${baseWidth * this.zoomLevel}`);
+        this.flowchartContainerSvgSvg.setAttribute("height", `${baseHeight * this.zoomLevel}`);
+    */
+        }
+    
+
     public RenderUi(subcontainer: HTMLDivElement) {
         if (!subcontainer) throw new Error("container is null");
         //let subcontainer = <HTMLDivElement>Html(container, "div", [], ["develop-ui"]);
@@ -551,11 +579,56 @@ export class Flowchart {
         let workspace = <HTMLDivElement>Html(subcontainer, "div", ["tabindex", "0"], ["develop-workspace"]);//tabindex, damit keypress-Events abgefangen werden können
         this.propertyGridHtmlDiv = <HTMLDivElement>Html(subcontainer, "div", [], ["develop-properties"]);
 
+      
+       //ZOOM hinzugefügt
         this.flowchartContainerSvgSvg = <SVGSVGElement>Svg(workspace, "svg", ["width", "100%", "height", "100%"], ["flowchart-container", "edit"]);
+        this.scalingLayer = <SVGGElement>Svg(this.flowchartContainerSvgSvg, "g", [], ["scaling-layer"]);
+          
+        const gridDefs = Svg(this.scalingLayer, "defs", []);
+const pattern = Svg(gridDefs, "pattern", [
+  "id", "grid-pattern",
+  "width", "40",
+  "height", "40",
+  "patternUnits", "userSpaceOnUse"
+]);
+Svg(pattern, "path", [
+  "d", "M 40 0 L 0 0 0 40",
+  "fill", "none",
+  "stroke", "#cccccc",
+  "stroke-width", "1"
+]);
 
-        this.linksLayer = <SVGGElement>Svg(this.flowchartContainerSvgSvg, "g", [], ["flowchart-links-layer"]);
-        this.operatorsLayer = <SVGGElement>Svg(this.flowchartContainerSvgSvg, "g", [], ["flowchart-operators-layer", "unselectable"]);
-        this.tempLayer = <SVGSVGElement>Svg(this.flowchartContainerSvgSvg, "g", [], ["flowchart-temporary-link-layer"]);
+Svg(this.scalingLayer, "rect", [
+  "x", "0",
+  "y", "0",
+  "width", "10000",
+  "height", "10000",
+  "fill", "url(#grid-pattern)"
+]);
+
+
+
+        // Und dann alle Layer in scalingLayer einfügen! alle Zeichenebenen in eine neue <g>-Gruppe (scalingLayer) verschoben, 
+        // weil scalingLayer wird mit transform: scale(...) gezoomt.
+        //Dadurch bleibt alles andere (Zoom-Buttons, UI-Menüs etc.) unberührt.
+
+        this.linksLayer = <SVGGElement>Svg(this.scalingLayer, "g", [], ["flowchart-links-layer"]);
+        this.operatorsLayer = <SVGGElement>Svg(this.scalingLayer, "g", [], ["flowchart-operators-layer", "unselectable"]);
+        this.tempLayer = <SVGSVGElement>Svg(this.scalingLayer, "g", [], ["flowchart-temporary-link-layer"]);
+        
+        //Button hinzugefügt !!!!!
+        let zoomControls = <HTMLDivElement>Html(workspace, "div", [], ["zoom-controls"]);
+        let zoomInButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "+");
+        let zoomOutButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "-");
+        zoomControls.style.position = "fixed";
+        zoomControls.style.top = "10px";
+        zoomControls.style.right = "10px";
+        zoomControls.style.zIndex = "1000"; 
+
+        zoomInButton.onclick = () => this.ZoomIn();
+        zoomOutButton.onclick = () => this.ZoomOut();
+        
+
         this.tempLayer.style.visibility = "hidden";//visible
         let defs = Svg(this.tempLayer, "defs", []);
         let markerArrow = Svg(defs, "marker", ["id", "marker-arrow", "markerWidth", "4", "markerHeight", "4", "refX", "1", "refY", "2", "orient", "0"]);
@@ -569,6 +642,23 @@ export class Flowchart {
         this.operatorLibDiv = <HTMLDivElement>Html(workspace, "div", [], ["flowchart-operatorlibdiv", "unselectable"]);
         this.operatorLibDiv.style.display = "none";
 
+        // Button erstellen
+        // Links neben Workspace eine eigene Spalte für den Button
+        const leftButtonColumn = <HTMLDivElement>Html(subcontainer, "div", [], ["operator-button-column"]);
+        const toggleButton = document.createElement("button");
+        toggleButton.innerText = "▶";
+        toggleButton.classList.add("operator-toggle-button");
+        leftButtonColumn.appendChild(toggleButton);
+
+        // Öffnet die Sidebar bei Hover
+        toggleButton.addEventListener("mouseenter", () => {
+            this.operatorLibDiv.style.display = "inline";
+        });
+        this.operatorLibDiv.addEventListener("mouseleave", () => {
+            this.operatorLibDiv.style.display = "none";
+        });
+
+
 
         //let toolsRect= <SVGRectElement>$.Svg(this.operatorLibDiv, "rect", ["width","140", "height", "100%", "rx", "10", "ry", "10"], ["tools-container"]);
 
@@ -578,12 +668,7 @@ export class Flowchart {
 
         //The mouseout event triggers when the mouse pointer leaves any child elements as well the selected element.
         //The mouseleave event is only triggered when the mouse pointer leaves the selected element.
-        operatorLibActivator.onmouseenter = (e) => {
-            this.operatorLibDiv.style.display = "inline";
-        }
-        this.operatorLibDiv.onmouseleave = (e) => {
-            this.operatorLibDiv.style.display = "none";
-        }
+        
 
         this.flowchartContainerSvgSvg.onclick = (e) => {
             if (e.target == this.Element)//if the click is in a "free" area, then the target is the uppermost layer; the linkLayer!
@@ -593,16 +678,20 @@ export class Flowchart {
             }
         }
 
-        workspace.onkeyup = (e) => {
-            if (e.key == "Delete") {
-                console.debug("Flowchart workspace.onkeyup with e.target=" + e.target + " und Delete-Key");
-                this.deleteSelectedThing();
+    
+//Neuu STRG + und -
+        workspace.addEventListener("keydown", (e) => {
+            if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "=")) {
+                e.preventDefault(); // 🔒 Blockiert den normalen Browser-Zoom
+        
+                if (e.key === "+" || e.key === "=") {
+                    this.ZoomIn();
+                } else if (e.key === "-") {
+                    this.ZoomOut();
+                }
             }
-            else {
-                console.debug("Flowchart workspace.onkeyup with e.target=" + e.target + " und key " + e.key);
-            }
-        }
-
+        });
+        
         this.operatorRegistry.populateOperatorLib(this.operatorLibDiv, (e: MouseEvent, ti: TypeInfo) => {
             let caption = ti.OperatorName;
             let o = this.createOperatorInternal(ti.GlobalTypeIndex, caption, null);
