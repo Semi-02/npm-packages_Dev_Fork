@@ -22,6 +22,7 @@ export class DevelopSFCController extends ScreenController {
     OnFirstStart(): void {
         // Now we don't need to pass the container each time
         // Just set it once when the element is available
+        
         if (this.mainDiv.value && !this.sfcui["container"]) { // Access internal property
             this.sfcui.setContainer(this.mainDiv.value as HTMLDivElement);
         }

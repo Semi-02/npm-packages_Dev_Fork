@@ -9,6 +9,8 @@
  * =============================================================================
  */
 
+//Todo: Kontrollieren ob das Interfaces sein müssen, oder ob sich eine Struktur mit Classen besser eignet, für vdie Typen. 
+
 /* Gesamtstruktur des SFC */
 export interface SfcData {
   start: SfcStep;
@@ -17,7 +19,7 @@ export interface SfcData {
 }
 
 /* Definition der Booleans, z. B. für LED-Steuerungen oder Merker */
-export interface SfcBooleans {
+export interface SfcBooleans {   //TODO in eine Map umwandeln und vordefinieren. Nicht interface sonder klasse <- gucken was sich am besten eignet
   redLed: boolean;
   yellowLed: boolean;
   greenLed: boolean;
@@ -35,7 +37,7 @@ export interface SfcStep {
   outgoingTransitions: SfcTransition[]; // Übergänge, die von diesem Schritt ausgehen
   incomingTransitions?: SfcTransition[];  // Übergänge, die in diesen Schritt hineinführen
 }
-
+//Boolean manipulation aber mit Veerbung damit es in Zukunft für z.B. Markos erweitern kann. 
 export interface BaseAction {
   codeUid: string;      // Eindeutiger Identifikator der Aktion
   caption: string;      // Beschriftung der Aktion
@@ -90,6 +92,13 @@ export type SfcAction =
   | ActionSL;
 
 
+  //ToDo in classen umbauen und dabei die enthalten variablen anpassen. 
+  //Todo Alternative Wege und Simultane Wege werden nicht unterstützt -> nur simple Transition aber mit Veerbung für zukünftige Erweiterung.
+
+  // Simple 1 source und 1 target, eine condition . 
+  // Joiner * source und 1 target, eine condition. ->   
+  // Splitter_simultan 1 source und * target.
+  // Splitter_alternativ 1 source und eine liste von simple transtitions
 export interface BaseTransition {
   source: SfcStep[];      // Schritte, die den Transition auslösen
   sourceDone: boolean[];  // Array, das anzeigt, ob die Quellen abgeschlossen sind
@@ -103,7 +112,6 @@ export interface TransitionSimple extends BaseTransition {
 
 export interface TransitionJoiner extends BaseTransition {
   type: "joiner";
-  // Zusätzliche transitionsspezifische Properties können hier ergänzt werden.
 }
 
 export interface TransitionSplitterSimultan extends BaseTransition {

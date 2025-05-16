@@ -68,7 +68,7 @@
 
 import { Html } from "../utils/common";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
-import { SfcData, SfcBooleans, SfcStep, SfcAction, SfcTransition } from "./SfcData";
+import { SfcData, SfcBooleans, SfcStep, SfcAction, SfcTransition, TransitionSimple, ActionS0, ActionL, ActionD, ActionP, ActionSD, ActionN } from "./SfcData";
 import { IAppManagement } from "../utils/interfaces";
 import { SfcCompiler } from "./SfcCompiler";
 import "../../style/sfcui.css";
@@ -103,6 +103,7 @@ export class SfcCallback {
 export class SfcUI {
   private compiler: SfcCompiler;
   private container?: HTMLDivElement; // Store the container reference
+  private webSocket: WebSocket | null = null;
 
   constructor(
     private appManagement: IAppManagement,
@@ -117,6 +118,7 @@ export class SfcUI {
     if (!this.appManagement) throw new Error("appManagement is null");
     this.compiler = new SfcCompiler();
     this.container = container; // Store the container reference if provided
+
   }
 
   // Ability to set container later if not provided in constructor
@@ -158,12 +160,88 @@ export class SfcUI {
     });
     this.buildView(gridContainer);
   }
-  // eventuell besser in SfcManager aufgehoben.
+
+
+  // Initialize WebSocket connection
+  private initWebSocket() {
+    if (this.webSocket && this.webSocket.readyState <= WebSocket.OPEN) {
+      return; // Already connected or connecting
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = window.location.hostname === 'localhost'
+      ? `ws://localhost:8080/ws`
+      : `${protocol}//${window.location.host}/ws`;
+
+    this.webSocket = new WebSocket(wsUrl);
+
+    this.webSocket.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    this.webSocket.onmessage = (event) => {
+      // Handle incoming messages if needed
+      console.log('Received WebSocket message:', event.data);
+    };
+
+    this.webSocket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    this.webSocket.onclose = () => {
+      console.log('WebSocket connection closed');
+      // Attempt to reconnect after a delay
+      setTimeout(() => this.initWebSocket(), 5000);
+    };
+  }
+
+  // Replace the existing postSfcData method with this WebSocket version
   private async postSfcData() {
     try {
-      // Implementation here
+      // Initialize WebSocket if not already connected
+      if (!this.webSocket || this.webSocket.readyState > WebSocket.OPEN) {
+        this.initWebSocket();
+      }
+
+      // Wait for connection to be established
+      if (this.webSocket && this.webSocket.readyState !== WebSocket.OPEN) {
+        console.log('Waiting for WebSocket connection...');
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 5000);
+        });
+      }
+
+      if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
+        throw new Error('WebSocket connection not available');
+      }
+
+      // Compile the SFC data to JSON
+      const jsonData = this.compiler.Compile(this.sfcData);
+
+      // Create a simple wrapper object with namespace and data
+      const message = {
+        namespace: 999, // Replace with the actual server-side namespace value
+        data: jsonData
+      };
+
+      // Send the message through WebSocket
+      console.log('Sending SFC data:', message);
+      this.webSocket.send(JSON.stringify(message));
+      console.log('SFC data sent through WebSocket');
+
     } catch (error) {
-      console.error("Fehler in postSfcData:", error);
+      console.error("Error in postSfcData:", error);
     }
   }
 
@@ -253,13 +331,19 @@ export class SfcUI {
     level: number,
     visitedSteps: Set<string>
   ) {
+    // Validate inputs to prevent null errors
+    if (!steps || !Array.isArray(steps)) {
+      console.error("Invalid steps array provided to buildStepsRecursively");
+      return;
+    }
     // Track next level steps
     const nextLevelSteps: SfcStep[] = [];
 
+
     // Process each step at this level
     steps.forEach((step, index) => {
-      // Skip if already visited (prevents cycles)
-      if (visitedSteps.has(step.uid)) return;
+      // Skip if step is null or already visited
+      if (!step || visitedSteps.has(step.uid)) return;
       visitedSteps.add(step.uid);
 
       // Build the step UI directly in the grid container
@@ -311,11 +395,11 @@ export class SfcUI {
     // Store reference for transition drawing
     (step as any)._domElement = stepContainer;
 
-    // Create upper part (4/5 of height)
+    // Create upper part 
     const upperPart = Html(stepContainer, "div", [], ["step-upper-part"], undefined, {
       display: "flex",
       flexDirection: "row",
-      height: "80%"
+      height: "60%"
     });
 
     // 1. Step name area
@@ -351,7 +435,7 @@ export class SfcUI {
       width: "60%",
       border: "2px solid #333",
       borderRadius: "4px",
-      padding: "0",  
+      padding: "0",
       overflowY: "auto", // Enable vertical scrolling
       maxHeight: "150px", // Set a maximum height for the scrollable area
       boxSizing: "border-box"
@@ -359,7 +443,7 @@ export class SfcUI {
 
 
     // Add hover button to actions area
-    this.addHoverButtonToStepActions(actionsArea);
+    this.addHoverButtonToStepActions(actionsArea,step);
 
 
     // Create actions table that fills the whole action area
@@ -373,8 +457,8 @@ export class SfcUI {
 
     // Set up the column groups to control column widths
     const colGroup = Html(actionsTable, "colgroup", [], []);
-    Html(colGroup, "col", [], [], undefined, { width: "40%" }); // Qualifier column - 2/5
-    Html(colGroup, "col", [], [], undefined, { width: "60%" }); // Action column - 3/5
+    Html(colGroup, "col", [], [], undefined, { width: "20%" }); // Qualifier column - 2/5
+    Html(colGroup, "col", [], [], undefined, { width: "80%" }); // Action column - 3/5
 
     const tableHead = Html(actionsTable, "thead", [], []);
     const headRow = Html(tableHead, "tr", [], []);
@@ -420,50 +504,120 @@ export class SfcUI {
       });
     });
 
-    // Lower part with matching divisions as the upper part
+    // Lower part - single container with all elements inside
     const lowerPart = Html(stepContainer, "div", [], ["step-lower-part"], undefined, {
-      height: "20%",
-      display: "flex",
-      flexDirection: "row"
+      height: "40%",
+      position: "relative",
+      width: "100%"
     });
 
-    // Updated the lower-name section to ensure the vertical line is properly centered
-    const lowerLeftSection = Html(lowerPart, "div", [], ["lower-name"], undefined, {
-      width: "25%",
-      padding: "4px",
-      backgroundColor: "#f9f9f9",
-      fontSize: "0.8em",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      position: "relative" // Added to ensure proper positioning context
-    });
-
-    // Centered vertical line with absolute positioning
-    Html(lowerLeftSection, "div", [], ["vertical-line"], undefined, {
+    // 1. Vertical line in the center beneath the name area
+    const verticalLine = Html(lowerPart, "div", [], ["vertical-line"], undefined, {
       position: "absolute",
       width: "2px",
       height: "100%",
       backgroundColor: "black",
-      left: "50%",
+      left: "12.5%", // Centered beneath the name area (25% / 2)
       transform: "translateX(-50%)"
     });
-    // 2. Middle section 
-    const lowerMiddleSection = Html(lowerPart, "div", [], ["lower-bridge"], undefined, {
-      width: "15%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      position: "relative"
+
+    // 2. Rectangle with black border (no fill) at top 1/3 of the line
+    const transitionRect = Html(lowerPart, "div", [], ["transition-rect"], undefined, {
+      position: "absolute",
+      width: "20px",
+      height: "10px",
+      border: "2px solid black",
+      backgroundColor: "transparent",
+      left: "12.5%", // Same as vertical line
+      top: "10%", // Position at top 1/3
+      transform: "translateX(-50%)"
     });
 
-    // 3. Right section (same as actions area)
-    const lowerRightSection = Html(lowerPart, "div", [], ["lower-actions"], undefined, {
-      width: "60%",
-      padding: "4px",
-      backgroundColor: "#f9f9f9",
-      fontSize: "0.8em"
+    // 3. Transition condition text container with edit button
+    const textContainer = Html(lowerPart, "div", [], ["transition-text-container"], undefined, {
+      position: "absolute",
+      left: "calc(12.5% + 15px)", // Right of the rectangle
+      top: "10%", // Same vertical position as rectangle
+      display: "flex",
+      alignItems: "center",
+      maxWidth: "calc(87.5% - 15px)", // Remaining width of step
+      overflow: "hidden",
+      whiteSpace: "nowrap"
     });
+
+    // Add condition text with auto-scaling
+    let transitionCondition = "";
+    if (step.outgoingTransitions && step.outgoingTransitions.length > 0) {
+      transitionCondition = step.outgoingTransitions[0].condition ?
+        step.outgoingTransitions[0].condition[0] : "";
+    }
+
+    const conditionText = Html(textContainer, "div", [], ["transition-condition"], transitionCondition, {
+      fontSize: "0.8em",
+      fontFamily: "monospace",
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+      flex: "1"
+    });
+
+    // Add auto-scaling to text if needed
+    const checkTextOverflow = () => {
+      if (conditionText.scrollWidth > conditionText.clientWidth) {
+        const scale = conditionText.clientWidth / conditionText.scrollWidth;
+        const minScale = 0.6; // Don't scale below 60%
+        conditionText.style.transform = `scale(${Math.max(scale, minScale)})`;
+        conditionText.style.transformOrigin = "left center";
+      }
+    };
+
+    // Call once and also add resize listener
+    setTimeout(checkTextOverflow, 0);
+    window.addEventListener("resize", checkTextOverflow);
+
+    // Add edit button at the end
+    const editButton = Html(textContainer, "button", [], ["condition-edit-button"], "✏️", {
+      marginLeft: "4px",
+      backgroundColor: "transparent",
+      border: "none",
+      cursor: "pointer",
+      fontSize: "0.8em",
+      padding: "2px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+
+    // Add click event for the edit button
+    editButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!step.outgoingTransitions || step.outgoingTransitions.length === 0) {
+        // Create a new transition if none exists
+        const newTransition: TransitionSimple = {
+          type: "simple",
+          source: [step],
+          sourceDone: [true],
+          target: [],
+          condition: [""]
+        };
+        step.outgoingTransitions = [newTransition];
+      }
+
+      // Get the current condition
+      const currentCondition = step.outgoingTransitions[0].condition ?
+        step.outgoingTransitions[0].condition[0] : "";
+
+      // Prompt for new condition
+      const newCondition = prompt("Edit transition condition:", currentCondition);
+
+      // Update if not cancelled
+      if (newCondition !== null) {
+        step.outgoingTransitions[0].condition = [newCondition];
+        conditionText.textContent = newCondition;
+        checkTextOverflow(); // Recheck scaling after text change
+      }
+    });
+    // ...existing code...
     return stepContainer; // Return for grid positioning
   }
 
@@ -537,88 +691,82 @@ export class SfcUI {
 
   //Hilfsmethode um den Hover-Button zu erstellen
 
-private addHoverButtonToStepActions(stepActionsContainer: HTMLElement): void {
-  // Create the button element
-  const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add", {
-    display: "none", // Initially hidden
-    position: "absolute",
-    top: "50%",
-    right: "10px",
-    transform: "translateY(-50%)",
-    padding: "6px 12px",
-    backgroundColor: "#007bff",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    zIndex: "10",
-  });
-
-  // Add functionality to create a new step and append it to the grid
-  hoverButton.addEventListener("click", () => {
-    // Create a new step object (similar to SfcStep)
-    const newStep: SfcStep = {
-      uid: `step-${Date.now()}`, // Unique ID based on timestamp
-      caption: "New Step",
-      actions: [
-        {
-          codeUid: `A-${Date.now()}`,
-          caption: "New Action",
-          targetBoolean: "newBoolean",
-          qualifier: "N",
-        } as SfcAction,
-      ],
-      outgoingTransitions: [],
-      incomingTransitions: [],
+  private addHoverButtonToStepActions(stepActionsContainer: HTMLElement, step: SfcStep): void {
+    // Create the button element
+    const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add Action", {
+      display: "none", // Initially hidden
+      position: "absolute",
+      top: "50%",
+      right: "10px",
+      transform: "translateY(-50%)",
+      padding: "6px 12px",
+      backgroundColor: "#007bff",
+      color: "#fff",
+      border: "none",
+      borderRadius: "4px",
+      cursor: "pointer",
+      zIndex: "10",
+    });
+  
+    // Add functionality to add a new action to the selected step
+    hoverButton.addEventListener("click", () => {
+      // Create a new action with qualifier "N"
+      const newAction: ActionN = {
+        codeUid: `A-${Date.now()}`,
+        caption: "New Action",
+        targetBoolean: "newBoolean",
+        qualifier: "N"
+      };
+      
+      // Add the new action to the step's actions array
+      step.actions.push(newAction);
+      
+      // Find the table body and add a new row for the action
+      const tableBody = stepActionsContainer.querySelector('.actions-table tbody');
+      if (tableBody) {
+        const actionRow = Html(tableBody, "tr", [], []);
+        Html(actionRow, "td", [], [], newAction.qualifier, {
+          padding: "4px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          boxSizing: "border-box"
+        });
+        Html(actionRow, "td", [], [], newAction.caption, {
+          padding: "4px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          boxSizing: "border-box"
+        });
+      } else {
+        console.error("Table body not found in actions container");
+      }
+    });
+  
+    // Show the button when hovering over the container or the button itself
+    const showButton = () => {
+      hoverButton.style.display = "block";
     };
+  
+    // Hide the button when leaving both the container and the button
+    const hideButton = (event: MouseEvent) => {
+      const relatedTarget = event.relatedTarget as HTMLElement;
+      if (!stepActionsContainer.contains(relatedTarget) && relatedTarget !== hoverButton) {
+        hoverButton.style.display = "none";
+      }
+    };
+  
+    // Add event listeners to the container and button
+    stepActionsContainer.addEventListener("mouseenter", showButton);
+    stepActionsContainer.addEventListener("mouseleave", hideButton);
+    hoverButton.addEventListener("mouseenter", showButton);
+    hoverButton.addEventListener("mouseleave", hideButton);
+  }
 
-    // Add the new step to the SFC data
-    this.sfcData.steps.push(newStep);
-
-    // Find the grid container (steps-grid-container)
-    const stepsGridContainer = stepActionsContainer.closest(".steps-grid-container") as HTMLElement;
-    if (!stepsGridContainer) {
-      console.error("Steps grid container not found");
-      return;
-    }
-
-    // Build the new step and append it to the grid
-    const newStepElement = this.buildStep(stepsGridContainer, newStep);
-
-    // Position the new step at the bottom of the grid
-    const totalSteps = this.sfcData.steps.length;
-    newStepElement.style.gridRow = `${totalSteps}`; // Place it in the next available row
-    newStepElement.style.gridColumn = `1`; // Always in the first column for simplicity
-  });
-
-  // Show the button when hovering over the container or the button itself
-  const showButton = () => {
-    hoverButton.style.display = "block";
-  };
-
-  // Hide the button when leaving both the container and the button
-  const hideButton = (event: MouseEvent) => {
-    const relatedTarget = event.relatedTarget as HTMLElement;
-    if (!stepActionsContainer.contains(relatedTarget) && relatedTarget !== hoverButton) {
-      hoverButton.style.display = "none";
-    }
-  };
-
-  // Add event listeners to the container and button
-  stepActionsContainer.addEventListener("mouseenter", showButton);
-  stepActionsContainer.addEventListener("mouseleave", hideButton);
-  hoverButton.addEventListener("mouseenter", showButton);
-  hoverButton.addEventListener("mouseleave", hideButton);
 }
-}
-
-// Annahme: Die Typen aus SfcData.ts sind bereits im Projekt verfügbar.
-// Zum Beispiel: SfcData, SfcStep, SfcAction, ActionN, ActionS0, ActionL, ActionD, ActionP, ActionSD,
-// BaseTransition, TransitionSimple, etc.
-
-// Erstelle zunächst die einzelnen Schritte (Steps)
-
-// Schritt 1: Start-Step
+// Test data for SFC 
+// ToDo in Klassen mit Kontrucktoren umbauen
 const step1: SfcStep = {
   uid: "step1",
   caption: "S_1",
@@ -628,19 +776,17 @@ const step1: SfcStep = {
       caption: "Activate Motor",
       targetBoolean: "redLed",
       qualifier: "N"  // ActionN
-    } as SfcAction,
+    } as ActionN,
     {
       codeUid: "A002",
       caption: "Initialize Sensors",
       targetBoolean: "yellowLed",
       qualifier: "S0"  // ActionS0
-    } as SfcAction,
+    } as ActionS0,
   ],
-  outgoingTransitions: [], // Wird im Folgenden ergänzt
-  // incomingTransitions bleibt leer, da dies der erste Step ist
+  outgoingTransitions: [],
 };
 
-// Schritt 2: Intermediate Step
 const step2: SfcStep = {
   uid: "step2",
   caption: " S_2",
@@ -650,19 +796,18 @@ const step2: SfcStep = {
       caption: "Check Temperature",
       targetBoolean: "greenLed",
       qualifier: "L"   // ActionL
-    } as SfcAction,
+    } as ActionL,
     {
       codeUid: "A004",
       caption: "Delay Process",
       targetBoolean: "merk1",
       qualifier: "D"   // ActionD
-    } as SfcAction,
+    } as ActionD,
   ],
   outgoingTransitions: [],
   incomingTransitions: [],
 };
 
-// Schritt 3: Final Step
 const step3: SfcStep = {
   uid: "step3",
   caption: "S_3",
@@ -672,44 +817,41 @@ const step3: SfcStep = {
       caption: "Stop Process",
       targetBoolean: "merk2",
       qualifier: "P"   // ActionP
-    } as SfcAction,
+    } as ActionP,
     {
       codeUid: "A006",
       caption: "Reset Alarms",
       targetBoolean: "merk3",
       qualifier: "SD"  // ActionSD
-    } as SfcAction,
+    } as ActionSD,
   ],
   outgoingTransitions: [],
   incomingTransitions: [],
 };
 
-// Erstelle nun Transitionen zwischen den Steps:
-// Übergang von Step 1 zu Step 2
-const transition1: SfcTransition = {
+const transition1: TransitionSimple = {
   type: "simple",
   source: [step1],
-  sourceDone: [true], // Beispielwert: "Step1" ist abgeschlossen, um die Transition auszulösen.
+  sourceDone: [true],
   target: [step2],
-  condition: ["Motor active"] // Beispielhafte Bedingung
+  condition: ["merk1 == true"]
 };
 
-// Übergang von Step 2 zu Step 3
-const transition2: SfcTransition = {
+const transition2: TransitionSimple = {
   type: "simple",
   source: [step2],
   sourceDone: [false], // Beispielwert
   target: [step3],
-  condition: ["Temperature optimal"]
+  condition: ["merk2 == true"]
 };
 
-// Weisen die Transitionen den entsprechenden Steps zu:
+
 step1.outgoingTransitions.push(transition1);
 step2.incomingTransitions!.push(transition1);
 step2.outgoingTransitions.push(transition2);
 step3.incomingTransitions!.push(transition2);
 
-// Erstelle abschließend den vollständigen SFC-Datencontainer
+
 const testSfcData: SfcData = {
   start: step1,
   steps: [step1, step2, step3],
@@ -724,6 +866,4 @@ const testSfcData: SfcData = {
   },
 };
 
-// TestSfcData enthält nun 3 aufeinanderfolgende Steps,
-// wobei jeder Step mindestens 2 Actions besitzt und Transitionen definiert sind.
-console.log(testSfcData);
+//console.log(testSfcData);
