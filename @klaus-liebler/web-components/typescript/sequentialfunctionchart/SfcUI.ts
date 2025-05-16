@@ -72,6 +72,16 @@ import { SfcData, SfcBooleans, SfcStep, SfcAction, SfcTransition, TransitionSimp
 import { IAppManagement } from "../utils/interfaces";
 import { SfcCompiler } from "./SfcCompiler";
 import "../../style/sfcui.css";
+// Import the provider
+import { SfcTestDataProvider } from "./SfcTestData.ts";
+import * as flatbuffers from 'flatbuffers';
+import { OkDialog } from "../dialog_controller.ts";
+import { Severity } from "@klaus-liebler/commons";
+import { RequestFbdRun, Requests, RequestWrapper } from "@generated/flatbuffers_ts/functionblock.ts";
+
+
+  const TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; //SFC = Sequential Function Chart
+  const Namespace = 999;
 
 export class SfcOptions {
   canUserEditLinks: boolean = true;
@@ -102,7 +112,7 @@ export class SfcCallback {
 }
 export class SfcUI {
   private compiler: SfcCompiler;
-  private container?: HTMLDivElement; // Store the container reference
+  private container?: HTMLDivElement; 
   private webSocket: WebSocket | null = null;
 
   constructor(
@@ -110,133 +120,75 @@ export class SfcUI {
     private sfcData: SfcData,
     private sfcCallbacks: SfcCallback,
     private options: SfcOptions,
-    container?: HTMLDivElement // Optional container parameter
+    container?: HTMLDivElement 
   ) {
     if (!this.sfcData) throw new Error("sfcData is null");
     if (!this.sfcCallbacks) throw new Error("sfcCallbacks is null");
     if (!this.options) throw new Error("options is null");
     if (!this.appManagement) throw new Error("appManagement is null");
     this.compiler = new SfcCompiler();
-    this.container = container; // Store the container reference if provided
+    this.container = container; 
 
   }
 
-  // Ability to set container later if not provided in constructor
   public setContainer(container: HTMLDivElement): void {
     this.container = container;
   }
-  // Temporäre Methode
+
   public loadTestData() {
-    // Use the test data that's already defined at the bottom of the file
-    this.sfcData = testSfcData;
+    this.sfcData = SfcTestDataProvider.getBasicSfcData();
     console.log("Test data loaded");
   }
 
-  // RenderUI now uses the stored container if no parameter is provided
   public RenderUI(subcontainer?: HTMLDivElement): void {
-    // Use provided subcontainer or fall back to stored container
     const targetContainer = subcontainer || this.container;
-
-    // Check if we have a valid container
     if (!targetContainer) throw new Error("No container available for rendering");
-
-    // The rest of your rendering logic
     if (!this.sfcData) throw new Error("sfcData is null");
 
-    // Clear previous content
     targetContainer.innerHTML = "";
-
-    // Create the menu at the top of the subcontainer
     this.buildMenu(targetContainer);
-
-    // Create the main container for the SFC below the menu
-    const gridContainer = Html(targetContainer, "div", [], ["grid-container"] );
+    const gridContainer = Html(targetContainer, "div", [], ["grid-container"], undefined, {
+      display: "flex",
+      flexDirection: "column",
+      flex: "1",
+      width: "100%",
+      marginTop: "8px",
+      overflow: "hidden"
+    });
     this.buildView(gridContainer);
   }
 
 
-  // Initialize WebSocket connection
-  private initWebSocket() {
-    if (this.webSocket && this.webSocket.readyState <= WebSocket.OPEN) {
-      return; // Already connected or connecting
-    }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = window.location.hostname === 'localhost'
-      ? `ws://localhost:8080/ws`
-      : `${protocol}//${window.location.host}/ws`;
-
-    this.webSocket = new WebSocket(wsUrl);
-
-    this.webSocket.onopen = () => {
-      console.log('WebSocket connection established');
-    };
-
-    this.webSocket.onmessage = (event) => {
-      // Handle incoming messages if needed
-      console.log('Received WebSocket message:', event.data);
-    };
-
-    this.webSocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    this.webSocket.onclose = () => {
-      console.log('WebSocket connection closed');
-      // Attempt to reconnect after a delay
-      setTimeout(() => this.initWebSocket(), 5000);
-    };
-  }
-
-  // Replace the existing postSfcData method with this WebSocket version
-  private async postSfcData() {
-    try {
-      // Initialize WebSocket if not already connected
-      if (!this.webSocket || this.webSocket.readyState > WebSocket.OPEN) {
-        this.initWebSocket();
-      }
-
-      // Wait for connection to be established
-      if (this.webSocket && this.webSocket.readyState !== WebSocket.OPEN) {
-        console.log('Waiting for WebSocket connection...');
-        await new Promise<void>((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
-              clearInterval(checkInterval);
-              resolve();
+  // Send SFC jsonFile to server Sollte so passen muss noch getestet werden
+  private async postSfcFile(path:string, onSuccessAction?:(path:string)=>void, onFailAction?:(path:string)=>void) {
+    
+            try {
+                const response = await fetch(this.options.httpServerBasePath + path, {
+                    method: 'POST',
+                    body: this.compiler.compileSfcDataToJson(this.sfcData),
+                    headers: {
+                    'Content-Type': 'application/octet-stream'
+                    }
+                });
+    
+                if (!response.ok) {
+                    this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `HTTP Error ${response.status}`));
+                    if (onFailAction) onFailAction(path);
+                    return;
+                }
+    
+                this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
+                if (onSuccessAction) onSuccessAction(path);
+    
+            } catch (error) {
+                console.error('There was a problem with the post operation:', error);
+                this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Generic Error`));
+                if (onFailAction) onFailAction(path);
             }
-          }, 100);
-
-          // Timeout after 5 seconds
-          setTimeout(() => {
-            clearInterval(checkInterval);
-            resolve();
-          }, 5000);
-        });
-      }
-
-      if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
-        throw new Error('WebSocket connection not available');
-      }
-
-      // Compile the SFC data to JSON
-      const jsonData = this.compiler.Compile(this.sfcData);
-
-      // Create a simple wrapper object with namespace and data
-      const message = {
-        namespace: 999, // Replace with the actual server-side namespace value
-        data: jsonData
-      };
-
-      // Send the message through WebSocket
-      console.log('Sending SFC data:', message);
-      this.webSocket.send(JSON.stringify(message));
-      console.log('SFC data sent through WebSocket');
-
-    } catch (error) {
-      console.error("Error in postSfcData:", error);
-    }
   }
+
+ // constexpr const char *TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; //SFC = Sequential Function Chart
 
   private buildMenu(subcontainer: HTMLDivElement) {
     // Create the menu at the top of the container
@@ -250,7 +202,18 @@ export class SfcUI {
           new MenuItem("💾 Save (labathome)", () => null),
         ]),
         new Menu("Debug", [
-          new MenuItem("☭ Start Debug", () => this.postSfcData()),
+          // das ist noch nciht auf den Richtigen Typen eingestellt, über Flattbuffers muss noch "RequestSfcRun" erstellt werden
+          // hier testen ob die namespace unterscheidung reicht. 
+          new MenuItem("☭ Start Debug", () => this.postSfcFile(TEMPSFC_FILEPATH,
+            (p: string) => {
+              var b = new flatbuffers.Builder(1024);
+              b.finish(RequestWrapper.createRequestWrapper(b, Requests.RequestFbdRun, RequestFbdRun.createRequestFbdRun(b)));
+              this.appManagement.SendFinishedBuilder(Namespace, b, 3000);
+            },
+            (p: string) => {
+              console.error(`As file "${p}" could no be saved on labathome, the RequestFbdRun will not be sent to labathome`)
+            }
+          )),
           new MenuItem("× Stop Debug", () => null),
           new MenuItem("👣 Set as Startup-App", () => null),
           new MenuItem("🧪 Load Test Data", () => {
@@ -271,15 +234,32 @@ export class SfcUI {
 
   private buildView(gridcontainer: HTMLElement) {
     // Create a two-column layout container with flex
-    const twoColumnContainer = Html(gridcontainer, "div", [], ["two-column-container"]
-    );
+    const twoColumnContainer = Html(gridcontainer, "div", [], ["two-column-container"], undefined, {
+      display: "flex",
+      flexDirection: "row",
+      width: "100%",
+      height: "100%",
+      gap: "16px"
+    });
 
     // Create the diagram area (left column - 2/3 width)
-    const diagramContainer = Html(twoColumnContainer, "div", [], ["diagram-container"]);
+    const diagramContainer = Html(twoColumnContainer, "div", [], ["diagram-container"], undefined, {
+      flex: "2",
+      border: "1px solid #ccc",
+      padding: "16px",
+      overflowY: "auto",
+      height: "100%"
+    });
     this.buildDiagram(diagramContainer);
 
     // Create the boolean field area (right column - 1/3 width)
-    const booleanFieldContainer = Html(twoColumnContainer, "div", [], ["boolean-field-container"]);
+    const booleanFieldContainer = Html(twoColumnContainer, "div", [], ["boolean-field-container"], undefined, {
+      flex: "1",
+      border: "1px solid #ccc",
+      padding: "8px",
+      overflowY: "auto",
+      height: "100%"
+    });
     this.buildBooleanField(booleanFieldContainer);
   }
 
@@ -288,7 +268,14 @@ export class SfcUI {
     diagramContainer.innerHTML = "";
 
     // Create a CSS grid container for the SFC steps
-    const stepsGridContainer = Html(diagramContainer, "div", [], ["steps-grid-container"]);
+    const stepsGridContainer = Html(diagramContainer, "div", [], ["steps-grid-container"], undefined, {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+      gridAutoRows: "min-content",
+      gap: "0px 0px", // Row gap 0px, column gap 0px
+      width: "100%",
+      position: "relative"
+    });
 
     // Start with the start step and recursively build the SFC diagram
     this.buildStepsRecursively(stepsGridContainer, [this.sfcData.start], 0, new Set());
@@ -355,27 +342,60 @@ export class SfcUI {
   // Modified buildStep to return the step container for grid positioning
   private buildStep(container: HTMLElement, step: SfcStep): HTMLElement {
     // Create the main step container
-    const stepContainer = Html(container, "div", [], ["step-container"]);
+    const stepContainer = Html(container, "div", [], ["step-container"], undefined, {
+      width: "100%",
+      overflow: "hidden",
+      margain: "0px"
+    });
 
     // Store reference for transition drawing
     (step as any)._domElement = stepContainer;
 
     // Create upper part 
-    const upperPart = Html(stepContainer, "div", [], ["step-upper-part"]);
+    const upperPart = Html(stepContainer, "div", [], ["step-upper-part"], undefined, {
+      display: "flex",
+      flexDirection: "row",
+      height: "60%"
+    });
 
     // 1. Step name area
-    const nameArea = Html(upperPart, "div", [], ["step-name"]);
-    nameArea.setAttribute("data-step-uid", step.uid); // <--- Eindeutige Zuordnung
+    const nameArea = Html(upperPart, "div", [], ["step-name"], undefined, {
+      width: "25%",
+      padding: "8px",
+      border: "2px solid #333",
+      borderRadius: "4px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: "bold",
+      backgroundColor: "#f5f5f5",
+      textAlign: "center"
+    });
     Html(nameArea, "span", [], [], step.caption);
 
-  this.addHoverButtonsToStepName(nameArea, step); // <--- Step mitgeben
-
     // 2. Connection line (bridge)
-    const bridgeArea = Html(upperPart, "div", [], ["step-bridge"]);
-    Html(bridgeArea, "div", [], ["bridge-line"]);
+    const bridgeArea = Html(upperPart, "div", [], ["step-bridge"], undefined, {
+      width: "15%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+    Html(bridgeArea, "div", [], ["bridge-line"], undefined, {
+      height: "2px",
+      width: "100%",
+      backgroundColor: "black"
+    });
 
     // 3. Actions table
-    const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
+    const actionsArea = Html(upperPart, "div", [], ["step-actions"], undefined, {
+      width: "60%",
+      border: "2px solid #333",
+      borderRadius: "4px",
+      padding: "0",
+      overflowY: "auto", // Enable vertical scrolling
+      maxHeight: "150px", // Set a maximum height for the scrollable area
+      boxSizing: "border-box"
+    });
 
 
     // Add hover button to actions area
@@ -383,7 +403,13 @@ export class SfcUI {
 
 
     // Create actions table that fills the whole action area
-    const actionsTable = Html(actionsArea, "table", [], ["actions-table"]);
+    const actionsTable = Html(actionsArea, "table", [], ["actions-table"], undefined, {
+      width: "100%", // Take full width
+      borderCollapse: "collapse",
+      tableLayout: "fixed", // Important for fixed column widths to work
+      margin: "0",
+      boxSizing: "border-box"
+    });
 
     // Set up the column groups to control column widths
     const colGroup = Html(actionsTable, "colgroup", [], []);
@@ -553,23 +579,42 @@ export class SfcUI {
 
   private buildBooleanField(container: HTMLElement) {
     // Create a container for the boolean fields
-    const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"]);
+    const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"], undefined, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      width: "100%"
+    });
 
     // Add title
-    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Boolean Values", );
+    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Boolean Values", {
+      margin: "0 0 12px 0",
+      padding: "0 0 8px 0",
+      borderBottom: "1px solid #ddd"
+    });
 
     // Create a field for each boolean in the data
     if (this.sfcData.booleans) {
       Object.entries(this.sfcData.booleans).forEach(([name, value]) => {
         // Create row container for each boolean
-        const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
+        const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"], undefined, {
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "6px",
+          borderBottom: "1px solid #eee"
+        });
 
         // Boolean name
         Html(boolRow, "span", [], ["bool-name"], name);
 
         // Boolean value dropdown
         const selectContainer = Html(boolRow, "div", [], ["bool-value-container"]);
-        const select = Html(selectContainer, "select", [], ["bool-value-select"]) as HTMLSelectElement;
+        const select = Html(selectContainer, "select", [], ["bool-value-select"], undefined, {
+          padding: "4px",
+          borderRadius: "4px"
+        }) as HTMLSelectElement;
 
         // Add options
         const optionTrue = Html(select, "option", ["value", "true"], [], "true") as HTMLOptionElement;
@@ -590,7 +635,12 @@ export class SfcUI {
         });
       });
     } else {
-      Html(booleanFieldsContainer, "div", [], ["no-booleans"], "No boolean values defined in SFC data");
+      Html(booleanFieldsContainer, "div", [], ["no-booleans"], "No boolean values defined in SFC data", {
+        padding: "12px",
+        color: "#666",
+        fontStyle: "italic",
+        textAlign: "center"
+      });
     }
   }
 
@@ -600,7 +650,18 @@ export class SfcUI {
   private addHoverButtonToStepActions(stepActionsContainer: HTMLElement, step: SfcStep): void {
     // Create the button element
     const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add Action", {
-    
+      display: "none", // Initially hidden
+      position: "absolute",
+      top: "50%",
+      right: "10px",
+      transform: "translateY(-50%)",
+      padding: "6px 12px",
+      backgroundColor: "#007bff",
+      color: "#fff",
+      border: "none",
+      borderRadius: "4px",
+      cursor: "pointer",
+      zIndex: "10",
     });
   
     // Add functionality to add a new action to the selected step
@@ -659,144 +720,4 @@ export class SfcUI {
     hoverButton.addEventListener("mouseleave", hideButton);
   }
 
-/**
- * Fügt drei Hover-Buttons in das step-name-Div ein:
- * - Oben rechts
- * - Unten rechts
- * - Oben links
- */
-private addHoverButtonsToStepName(stepNameDiv: HTMLElement, step: SfcStep): void {
-  // Container für relative Positionierung
-  stepNameDiv.style.position = "relative";
-
-  // Oben rechts (➕)
-  const btnTopRight = Html(stepNameDiv, "button", [], ["step-name-btn", "top-right"], "➕");
-  btnTopRight.onclick = () => {
-    // Beispiel: Neuen Step über dem aktuellen einfügen
-    console.log("Neuen Step ÜBER", step.uid, "einfügen");
-    // Hier eigene Logik einfügen
-  };
-
-  // Unten rechts (➕)
-  const btnBottomRight = Html(stepNameDiv, "button", [], ["step-name-btn", "bottom-right"], "➕");
-  btnBottomRight.onclick = () => {
-    // Beispiel: Neuen Step UNTER dem aktuellen einfügen
-    console.log("Neuen Step UNTER", step.uid, "einfügen");
-    // Hier eigene Logik einfügen
-  };
-
-  // Oben links (−)
-  const btnTopLeft = Html(stepNameDiv, "button", [], ["step-name-btn", "top-left"], "−");
-  btnTopLeft.onclick = () => {
-    // Beispiel: Diesen Step löschen
-    console.log("Step", step.uid, "löschen");
-    // Hier eigene Logik einfügen
-  };
 }
-
-}
-
-
-
-// Test data for SFC 
-// ToDo in Klassen mit Kontrucktoren umbauen
-const step1: SfcStep = {
-  uid: "step1",
-  caption: "S_1",
-  actions: [
-    {
-      codeUid: "A001",
-      caption: "Activate Motor",
-      targetBoolean: "redLed",
-      qualifier: "N"  // ActionN
-    } as ActionN,
-    {
-      codeUid: "A002",
-      caption: "Initialize Sensors",
-      targetBoolean: "yellowLed",
-      qualifier: "S0"  // ActionS0
-    } as ActionS0,
-  ],
-  outgoingTransitions: [],
-};
-
-const step2: SfcStep = {
-  uid: "step2",
-  caption: " S_2",
-  actions: [
-    {
-      codeUid: "A003",
-      caption: "Check Temperature",
-      targetBoolean: "greenLed",
-      qualifier: "L"   // ActionL
-    } as ActionL,
-    {
-      codeUid: "A004",
-      caption: "Delay Process",
-      targetBoolean: "merk1",
-      qualifier: "D"   // ActionD
-    } as ActionD,
-  ],
-  outgoingTransitions: [],
-  incomingTransitions: [],
-};
-
-const step3: SfcStep = {
-  uid: "step3",
-  caption: "S_3",
-  actions: [
-    {
-      codeUid: "A005",
-      caption: "Stop Process",
-      targetBoolean: "merk2",
-      qualifier: "P"   // ActionP
-    } as ActionP,
-    {
-      codeUid: "A006",
-      caption: "Reset Alarms",
-      targetBoolean: "merk3",
-      qualifier: "SD"  // ActionSD
-    } as ActionSD,
-  ],
-  outgoingTransitions: [],
-  incomingTransitions: [],
-};
-
-const transition1: TransitionSimple = {
-  type: "simple",
-  source: [step1],
-  sourceDone: [true],
-  target: [step2],
-  condition: ["merk1 == true"]
-};
-
-const transition2: TransitionSimple = {
-  type: "simple",
-  source: [step2],
-  sourceDone: [false], // Beispielwert
-  target: [step3],
-  condition: ["merk2 == true"]
-};
-
-
-step1.outgoingTransitions.push(transition1);
-step2.incomingTransitions!.push(transition1);
-step2.outgoingTransitions.push(transition2);
-step3.incomingTransitions!.push(transition2);
-
-
-const testSfcData: SfcData = {
-  start: step1,
-  steps: [step1, step2, step3],
-  booleans: {
-    redLed: false,
-    yellowLed: false,
-    greenLed: false,
-    merk1: false,
-    merk2: false,
-    merk3: false,
-    merk4: false,
-  },
-};
-
-//console.log(testSfcData);

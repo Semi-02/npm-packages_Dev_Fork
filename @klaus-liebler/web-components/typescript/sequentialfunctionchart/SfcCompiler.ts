@@ -23,7 +23,7 @@ export class SfcCompiler {
   // Replace existing Compile method with this implementation
   // Or add it as a new method
   Compile(sfcData: SfcData): string {
-    return this.compileSfcData(sfcData);
+    return this.compileSfcDataToJson(sfcData);
   }
   
 /**
@@ -33,7 +33,7 @@ export class SfcCompiler {
  * @param sfcData The Sequential Function Chart data to compile
  * @returns A JSON string ready to be sent to the ESP32
  */
-compileSfcData(sfcData: SfcData): string {
+compileSfcDataToJson(sfcData: SfcData): string {
   try {
     // 1. Validate required data structures
     if (!sfcData) throw new Error("SFC data is null or undefined");
