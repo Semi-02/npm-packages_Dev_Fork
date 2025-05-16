@@ -150,14 +150,7 @@ export class SfcUI {
     this.buildMenu(targetContainer);
 
     // Create the main container for the SFC below the menu
-    const gridContainer = Html(targetContainer, "div", [], ["grid-container"], undefined, {
-      display: "flex",
-      flexDirection: "column",
-      flex: "1",
-      width: "100%",
-      marginTop: "8px",
-      overflow: "hidden"
-    });
+    const gridContainer = Html(targetContainer, "div", [], ["grid-container"] );
     this.buildView(gridContainer);
   }
 
@@ -278,32 +271,15 @@ export class SfcUI {
 
   private buildView(gridcontainer: HTMLElement) {
     // Create a two-column layout container with flex
-    const twoColumnContainer = Html(gridcontainer, "div", [], ["two-column-container"], undefined, {
-      display: "flex",
-      flexDirection: "row",
-      width: "100%",
-      height: "100%",
-      gap: "16px"
-    });
+    const twoColumnContainer = Html(gridcontainer, "div", [], ["two-column-container"]
+    );
 
     // Create the diagram area (left column - 2/3 width)
-    const diagramContainer = Html(twoColumnContainer, "div", [], ["diagram-container"], undefined, {
-      flex: "2",
-      border: "1px solid #ccc",
-      padding: "16px",
-      overflowY: "auto",
-      height: "100%"
-    });
+    const diagramContainer = Html(twoColumnContainer, "div", [], ["diagram-container"]);
     this.buildDiagram(diagramContainer);
 
     // Create the boolean field area (right column - 1/3 width)
-    const booleanFieldContainer = Html(twoColumnContainer, "div", [], ["boolean-field-container"], undefined, {
-      flex: "1",
-      border: "1px solid #ccc",
-      padding: "8px",
-      overflowY: "auto",
-      height: "100%"
-    });
+    const booleanFieldContainer = Html(twoColumnContainer, "div", [], ["boolean-field-container"]);
     this.buildBooleanField(booleanFieldContainer);
   }
 
@@ -312,14 +288,7 @@ export class SfcUI {
     diagramContainer.innerHTML = "";
 
     // Create a CSS grid container for the SFC steps
-    const stepsGridContainer = Html(diagramContainer, "div", [], ["steps-grid-container"], undefined, {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-      gridAutoRows: "min-content",
-      gap: "0px 0px", // Row gap 0px, column gap 0px
-      width: "100%",
-      position: "relative"
-    });
+    const stepsGridContainer = Html(diagramContainer, "div", [], ["steps-grid-container"]);
 
     // Start with the start step and recursively build the SFC diagram
     this.buildStepsRecursively(stepsGridContainer, [this.sfcData.start], 0, new Set());
@@ -386,60 +355,27 @@ export class SfcUI {
   // Modified buildStep to return the step container for grid positioning
   private buildStep(container: HTMLElement, step: SfcStep): HTMLElement {
     // Create the main step container
-    const stepContainer = Html(container, "div", [], ["step-container"], undefined, {
-      width: "100%",
-      overflow: "hidden",
-      margain: "0px"
-    });
+    const stepContainer = Html(container, "div", [], ["step-container"]);
 
     // Store reference for transition drawing
     (step as any)._domElement = stepContainer;
 
     // Create upper part 
-    const upperPart = Html(stepContainer, "div", [], ["step-upper-part"], undefined, {
-      display: "flex",
-      flexDirection: "row",
-      height: "60%"
-    });
+    const upperPart = Html(stepContainer, "div", [], ["step-upper-part"]);
 
     // 1. Step name area
-    const nameArea = Html(upperPart, "div", [], ["step-name"], undefined, {
-      width: "25%",
-      padding: "8px",
-      border: "2px solid #333",
-      borderRadius: "4px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontWeight: "bold",
-      backgroundColor: "#f5f5f5",
-      textAlign: "center"
-    });
+    const nameArea = Html(upperPart, "div", [], ["step-name"]);
+    nameArea.setAttribute("data-step-uid", step.uid); // <--- Eindeutige Zuordnung
     Html(nameArea, "span", [], [], step.caption);
 
+  this.addHoverButtonsToStepName(nameArea, step); // <--- Step mitgeben
+
     // 2. Connection line (bridge)
-    const bridgeArea = Html(upperPart, "div", [], ["step-bridge"], undefined, {
-      width: "15%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    Html(bridgeArea, "div", [], ["bridge-line"], undefined, {
-      height: "2px",
-      width: "100%",
-      backgroundColor: "black"
-    });
+    const bridgeArea = Html(upperPart, "div", [], ["step-bridge"]);
+    Html(bridgeArea, "div", [], ["bridge-line"]);
 
     // 3. Actions table
-    const actionsArea = Html(upperPart, "div", [], ["step-actions"], undefined, {
-      width: "60%",
-      border: "2px solid #333",
-      borderRadius: "4px",
-      padding: "0",
-      overflowY: "auto", // Enable vertical scrolling
-      maxHeight: "150px", // Set a maximum height for the scrollable area
-      boxSizing: "border-box"
-    });
+    const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
 
 
     // Add hover button to actions area
@@ -447,13 +383,7 @@ export class SfcUI {
 
 
     // Create actions table that fills the whole action area
-    const actionsTable = Html(actionsArea, "table", [], ["actions-table"], undefined, {
-      width: "100%", // Take full width
-      borderCollapse: "collapse",
-      tableLayout: "fixed", // Important for fixed column widths to work
-      margin: "0",
-      boxSizing: "border-box"
-    });
+    const actionsTable = Html(actionsArea, "table", [], ["actions-table"]);
 
     // Set up the column groups to control column widths
     const colGroup = Html(actionsTable, "colgroup", [], []);
@@ -623,42 +553,23 @@ export class SfcUI {
 
   private buildBooleanField(container: HTMLElement) {
     // Create a container for the boolean fields
-    const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"], undefined, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      width: "100%"
-    });
+    const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"]);
 
     // Add title
-    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Boolean Values", {
-      margin: "0 0 12px 0",
-      padding: "0 0 8px 0",
-      borderBottom: "1px solid #ddd"
-    });
+    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Boolean Values", );
 
     // Create a field for each boolean in the data
     if (this.sfcData.booleans) {
       Object.entries(this.sfcData.booleans).forEach(([name, value]) => {
         // Create row container for each boolean
-        const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"], undefined, {
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "6px",
-          borderBottom: "1px solid #eee"
-        });
+        const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
 
         // Boolean name
         Html(boolRow, "span", [], ["bool-name"], name);
 
         // Boolean value dropdown
         const selectContainer = Html(boolRow, "div", [], ["bool-value-container"]);
-        const select = Html(selectContainer, "select", [], ["bool-value-select"], undefined, {
-          padding: "4px",
-          borderRadius: "4px"
-        }) as HTMLSelectElement;
+        const select = Html(selectContainer, "select", [], ["bool-value-select"]) as HTMLSelectElement;
 
         // Add options
         const optionTrue = Html(select, "option", ["value", "true"], [], "true") as HTMLOptionElement;
@@ -679,12 +590,7 @@ export class SfcUI {
         });
       });
     } else {
-      Html(booleanFieldsContainer, "div", [], ["no-booleans"], "No boolean values defined in SFC data", {
-        padding: "12px",
-        color: "#666",
-        fontStyle: "italic",
-        textAlign: "center"
-      });
+      Html(booleanFieldsContainer, "div", [], ["no-booleans"], "No boolean values defined in SFC data");
     }
   }
 
@@ -694,18 +600,7 @@ export class SfcUI {
   private addHoverButtonToStepActions(stepActionsContainer: HTMLElement, step: SfcStep): void {
     // Create the button element
     const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add Action", {
-      display: "none", // Initially hidden
-      position: "absolute",
-      top: "50%",
-      right: "10px",
-      transform: "translateY(-50%)",
-      padding: "6px 12px",
-      backgroundColor: "#007bff",
-      color: "#fff",
-      border: "none",
-      borderRadius: "4px",
-      cursor: "pointer",
-      zIndex: "10",
+    
     });
   
     // Add functionality to add a new action to the selected step
@@ -764,7 +659,45 @@ export class SfcUI {
     hoverButton.addEventListener("mouseleave", hideButton);
   }
 
+/**
+ * Fügt drei Hover-Buttons in das step-name-Div ein:
+ * - Oben rechts
+ * - Unten rechts
+ * - Oben links
+ */
+private addHoverButtonsToStepName(stepNameDiv: HTMLElement, step: SfcStep): void {
+  // Container für relative Positionierung
+  stepNameDiv.style.position = "relative";
+
+  // Oben rechts (➕)
+  const btnTopRight = Html(stepNameDiv, "button", [], ["step-name-btn", "top-right"], "➕");
+  btnTopRight.onclick = () => {
+    // Beispiel: Neuen Step über dem aktuellen einfügen
+    console.log("Neuen Step ÜBER", step.uid, "einfügen");
+    // Hier eigene Logik einfügen
+  };
+
+  // Unten rechts (➕)
+  const btnBottomRight = Html(stepNameDiv, "button", [], ["step-name-btn", "bottom-right"], "➕");
+  btnBottomRight.onclick = () => {
+    // Beispiel: Neuen Step UNTER dem aktuellen einfügen
+    console.log("Neuen Step UNTER", step.uid, "einfügen");
+    // Hier eigene Logik einfügen
+  };
+
+  // Oben links (−)
+  const btnTopLeft = Html(stepNameDiv, "button", [], ["step-name-btn", "top-left"], "−");
+  btnTopLeft.onclick = () => {
+    // Beispiel: Diesen Step löschen
+    console.log("Step", step.uid, "löschen");
+    // Hier eigene Logik einfügen
+  };
 }
+
+}
+
+
+
 // Test data for SFC 
 // ToDo in Klassen mit Kontrucktoren umbauen
 const step1: SfcStep = {
