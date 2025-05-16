@@ -378,7 +378,11 @@ export interface IPortInfo{
 
 export async function FindProbablePorts():Promise<Array<IPortInfo>> {
     const allPorts = await autoDetect().list() as Array<IPortInfo>;
-    const filteredPorts= allPorts.filter(p=>validUsb.find(v=>v.productId==p.productId && v.vendorId==p.vendorId));
+    console.log("All detected ports:", allPorts);
+    const filteredPorts = allPorts.filter(p =>
+    validUsb.find(v => v.productId == p.productId && v.vendorId == p.vendorId)
+    || (p.path.includes("usbmodem")) // zusätzliche Regel für macOS
+    );
     if (filteredPorts.length<1) {
         throw Error("No connected Board found")
     }

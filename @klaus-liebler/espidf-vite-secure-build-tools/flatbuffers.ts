@@ -5,7 +5,7 @@ import { EscapeToVariableName2, StringBuilderImpl } from '@klaus-liebler/commons
 import * as npm from "./npm"
 
 export async function flatbuffers_generate(options: string, inputFile: string, outputBaseDir: string) {
-  const cmd = `flatc ${options} -o ${outputBaseDir} ${inputFile}`
+  const cmd = `flatc ${options} -o "${outputBaseDir}" "${inputFile}"`
   execSync(cmd, {
     env: process.env
   });

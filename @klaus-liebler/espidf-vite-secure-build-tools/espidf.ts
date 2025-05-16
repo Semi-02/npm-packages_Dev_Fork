@@ -6,6 +6,12 @@ import path from 'node:path';
 import { mac_12char } from './utils';
 import { FindProbablePorts } from './esp32';
 import * as os from "node:os"
+//Für macOS
+import { exec } from "child_process";
+import { promisify } from "util";
+
+//Für MacOS
+const execAsync = promisify(exec);
 
 export enum EncryptionStrength {
   AES128 = 256,//AES-128 (256-bit key)
@@ -16,7 +22,6 @@ export enum EncryptionStrength {
 const IDF_PATH = globalThis.process.env.IDF_PATH as string;
 //Location of esp idf tools
 const NVS_PARTITION_GEN_TOOL = path.join(IDF_PATH, "components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py");
-
 
 export async function createRandomFlashEncryptionKeyLazily(c: Context, keySize: EncryptionStrength) {
   const path = c.p.boardSpecificPath(P.FLASH_KEY_SUBDIR, P.FLASH_KEY_FILENAME);
@@ -94,8 +99,9 @@ function parsePartitionsCSVFromFile(filePath: string): IPartitionTableEntry[] {
 
 
 export async function buildFirmware(c: Context) {
-  exec_in_idf_terminal(`idf.py build`, c.c.idfProjectDirectory, (l) => l.startsWith("Successfully created"));
+  await exec_in_idf_terminal(`idf.py build`, c.c.idfProjectDirectory, (l) => l.startsWith("Successfully created"));
 }
+
 /*
 With flash encryption enabled, the following types of data are encrypted by default:
 Second Stage Bootloader (Firmware Bootloader)
@@ -106,9 +112,17 @@ All app type partitions
 */
 
 export async function encryptPartitions_Bootloader_App_PartitionTable_OtaData(c: Context) {
-  [c.f!.bootloader, c.f!.app, c.f!["partition-table"], c.f!.otadata].forEach(s => {
-    espsecure(`encrypt_flash_data --aes_xts --keyfile ${c.p.boardSpecificPath(P.FLASH_KEY_SUBDIR, P.FLASH_KEY_FILENAME)} --address ${s.offset} --output ${path.join(c.p.P_BUILD, s.file.replace(".bin", "-enc.bin"))} ${path.join(c.p.P_BUILD, s.file)}`, () => false);
-  })
+  if (!c.f) {
+    throw new Error("Fehler: c.f (Flasher-Konfiguration) ist null. Build war evtl. nicht erfolgreich oder flasher_args.json fehlt.");
+  }
+
+  [c.f.bootloader, c.f.app, c.f["partition-table"], c.f.otadata].forEach(s => {
+    espsecure(
+      `encrypt_flash_data --aes_xts --keyfile "${c.p.boardSpecificPath(P.FLASH_KEY_SUBDIR, P.FLASH_KEY_FILENAME)}" --address ${s.offset} --output "${path.join(c.p.P_BUILD, s.file.replace(".bin", "-enc.bin"))}" "${path.join(c.p.P_BUILD, s.file)}"`,
+      () => false
+    );
+  });
+
   console.log('Encryption finished');
 }
 
@@ -123,11 +137,11 @@ export function nvs_partition_gen(c: Context, encrypt: boolean, filterStdOut: (l
   }
 
   if (encrypt) {
-    const cmd = `python.exe ${NVS_PARTITION_GEN_TOOL} encrypt --inputkey " NO THIS IS NOT THE FLASH KEY, THIS IS A SEPARATE KEY SPECIFIC FOR NVS ENCRYPTION, see https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32s3/api-reference/storage/nvs_encryption.html ${p.boardSpecificPath(P.FLASH_KEY_SUBDIR, P.FLASH_KEY_FILENAME)}" "${path.join(p.GENERATED_USERSETTINGS, P.NVS_CSV_FILENAME)}" "${path.join(p.GENERATED_USERSETTINGS, P.NVS_PARTITION_BIN_FILENAME)}" ${nvsPartitionInfo.Size}`
+    const cmd = `python3 ${NVS_PARTITION_GEN_TOOL} encrypt --inputkey " NO THIS IS NOT THE FLASH KEY, THIS IS A SEPARATE KEY SPECIFIC FOR NVS ENCRYPTION, see https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32s3/api-reference/storage/nvs_encryption.html ${p.boardSpecificPath(P.FLASH_KEY_SUBDIR, P.FLASH_KEY_FILENAME)}" "${path.join(p.GENERATED_USERSETTINGS, P.NVS_CSV_FILENAME)}" "${path.join(p.GENERATED_USERSETTINGS, P.NVS_PARTITION_BIN_FILENAME)}" ${nvsPartitionInfo.Size}`
     exec_in_idf_terminal(cmd, c.c.idfProjectDirectory, filterStdOut)
     return { encrypted: true, file: path.join(p.GENERATED_USERSETTINGS, P.NVS_PARTITION_ENC_BIN_FILENAME), offset: nvsPartitionInfo.Offset!.toString() };
   } else {
-    const cmd = `python.exe ${NVS_PARTITION_GEN_TOOL} generate  "${path.join(p.GENERATED_USERSETTINGS, P.NVS_CSV_FILENAME)}" "${path.join(p.GENERATED_USERSETTINGS, P.NVS_PARTITION_BIN_FILENAME)}" ${nvsPartitionInfo.Size}`
+    const cmd = `python3 ${NVS_PARTITION_GEN_TOOL} generate  "${path.join(p.GENERATED_USERSETTINGS, P.NVS_CSV_FILENAME)}" "${path.join(p.GENERATED_USERSETTINGS, P.NVS_PARTITION_BIN_FILENAME)}" ${nvsPartitionInfo.Size}`
     exec_in_idf_terminal(cmd, c.c.idfProjectDirectory, filterStdOut)
     return { encrypted: false, file: path.join(p.GENERATED_USERSETTINGS, P.NVS_PARTITION_BIN_FILENAME), offset: nvsPartitionInfo.Offset!.toString() };
   }
@@ -158,7 +172,7 @@ export async function flashEncryptedFirmware(c: Context, write_nvs: boolean, nvs
   }
   var cmd = `--port ${pi.path} write_flash --flash_size keep`
   sections.forEach(s => {cmd += ` ${s.offset} ${s.file}`;})
-  esptool(cmd, (line) => line.startsWith("Wrote") || line.startsWith("Hash"))
+  await esptool(cmd, (line) => line.startsWith("Wrote") || line.startsWith("Hash"))
   console.log('Flash (encrypted) finished');
 }
 
@@ -208,30 +222,49 @@ export function espsecure(params: string, filterStdOut: (line: string) => boolea
   tool("espsecure.py", params, filterStdOut)
 }
 
-export function esptool(params: string, filterStdOut: (line: string) => boolean, workingDirectory: string = "./") {
-  tool("esptool.py", params, filterStdOut, workingDirectory)
+export async function esptool(params: string, filterStdOut: (line: string) => boolean, workingDirectory: string = "./") {
+  await tool("esptool.py", params, filterStdOut, workingDirectory)
 }
 
 
-export function tool(tool: string, params: string, filterStdOut: (line: string) => boolean = (l) => true, workingDirectory: string = "./") {
-  const cmd = `python.exe ${path.join(IDF_PATH, "components", "esptool_py", "esptool", tool)} ${params} `
-  exec_in_idf_terminal(cmd, workingDirectory, filterStdOut)
+export async function tool(tool: string, params: string, filterStdOut: (line: string) => boolean = (l) => true, workingDirectory: string = "./") {
+  const cmd = `python3 ${path.join(IDF_PATH, "components", "esptool_py", "esptool", tool)} ${params} `
+  await exec_in_idf_terminal(cmd, workingDirectory, filterStdOut)
 }
 
 export function spiffsgen_deprecated_use_littlefs_instead(image_size: number, base_dir: string, output_file: string, filterStdOut: (line: string) => boolean = (l) => true, workingDirectory: string = "./") {
-  const cmd = `python.exe spiffsgen.py ${image_size} ${base_dir} ${output_file} `
+  const cmd = `python3 spiffsgen.py ${image_size} ${base_dir} ${output_file} `
   exec_in_idf_terminal(cmd, workingDirectory, filterStdOut)
 }
 
-export function exec_in_idf_terminal(command: string, idfProjectDirectory: string, filterStdOut: (line: string) => boolean) {
-  const cmd = `${path.join(IDF_PATH, "export.bat")} && ${command}`
-  console.info(`Executing ${cmd}`)
-  const stdout = execSync(cmd, {
-    cwd: idfProjectDirectory,
-    env: process.env
-  });
-  if (stdout)
-    stdout.toString().split(os.EOL).filter((v) => filterStdOut(v)).forEach(v => console.log(v.toString()))
+export async function exec_in_idf_terminal(
+  command: string,
+  idfProjectDirectory: string,
+  filterStdOut: (line: string) => boolean
+): Promise<void> {
+  const exportScript = path.join(IDF_PATH, "export.sh");
+  const cmd = `bash -c 'source "${exportScript}" && ${command}'`;
+
+  console.info(`Executing: ${cmd}`);
+
+  try {
+    const { stdout, stderr } = await execAsync(cmd, {
+      cwd: idfProjectDirectory,
+      env: process.env,
+    });
+
+    if (stderr) console.warn(stderr);
+
+    if (stdout) {
+      stdout
+        .toString()
+        .split(os.EOL)
+        .filter(filterStdOut)
+        .forEach((line) => console.log(line));
+    }
+  } catch (error) {
+    console.error("Execution failed:", error);
+  }
 }
 
 export interface ConfigEnvironment {
