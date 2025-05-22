@@ -77,8 +77,7 @@ import { SfcTestDataProvider } from "./SfcTestData.ts";
 import * as flatbuffers from 'flatbuffers';
 import { OkDialog } from "../dialog_controller.ts";
 import { Severity } from "@klaus-liebler/commons";
-import { RequestFbdRun, Requests, RequestWrapper } from "@generated/flatbuffers_ts/functionblock.ts";
-
+import { RequestWrapper, RequestDebugData, RequestFbdRun, ResponseDebugData, ResponseSfcRun, Responses, ResponseWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
 
   const TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; //SFC = Sequential Function Chart
   const Namespace = 999;
@@ -159,7 +158,6 @@ export class SfcUI {
   }
 
 
-
   // Send SFC jsonFile to server Sollte so passen muss noch getestet werden
   private async postSfcFile(path:string, onSuccessAction?:(path:string)=>void, onFailAction?:(path:string)=>void) {
     
@@ -207,7 +205,7 @@ export class SfcUI {
           new MenuItem("☭ Start Debug", () => this.postSfcFile(TEMPSFC_FILEPATH,
             (p: string) => {
               var b = new flatbuffers.Builder(1024);
-              b.finish(RequestWrapper.createRequestWrapper(b, Requests.RequestFbdRun, RequestFbdRun.createRequestFbdRun(b)));
+              b.finish(RequestWrapper.createRequestWrapper(b, Requests.RequestSFCRun, RequestFbdRun.createRequestSFCRun(b)));
               this.appManagement.SendFinishedBuilder(Namespace, b, 3000);
             },
             (p: string) => {
