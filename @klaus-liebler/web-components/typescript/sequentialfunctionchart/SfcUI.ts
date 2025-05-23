@@ -642,6 +642,35 @@ private addHoverButtonsToStepName(stepNameDiv: HTMLElement, step: SfcStep): void
   // Oben rechts (➕)
   const btnTopRight = Html(stepNameDiv, "button", [], ["step-name-btn", "top-right"], "➕");
   btnTopRight.onclick = () => {
+
+
+      //PSEUDOCODE
+/*
+transition t_tmp;
+
+      public step addstepabove(data boolean uid){
+      stepcurrent= getStepByUid(uid);
+      stepnew= createStep();
+      tnew = newTransition();
+      t_tmp =stepcurrent getincoming transition();
+      t_tmp.setTarget(stepnew);
+
+      stepnew.outgoingTransitions.push(tnew);
+
+      tnew.setSource(stepnew);
+      stepcurrent.incomingTransitions.empty()
+      stepcurrent.incomingTransitions.push(tnew);
+      tnew.setTarger=stepcurrent.
+
+      //
+
+
+
+
+
+      }
+*/
+
     // Beispiel: Neuen Step über dem aktuellen einfügen
     console.log("Neuen Step ÜBER", step.uid, "einfügen");
     // Hier eigene Logik einfügen
@@ -650,6 +679,11 @@ private addHoverButtonsToStepName(stepNameDiv: HTMLElement, step: SfcStep): void
   // Unten rechts (➕)
   const btnBottomRight = Html(stepNameDiv, "button", [], ["step-name-btn", "bottom-right"], "➕");
   btnBottomRight.onclick = () => {
+
+
+
+
+
     // Beispiel: Neuen Step UNTER dem aktuellen einfügen
     console.log("Neuen Step UNTER", step.uid, "einfügen");
     // Hier eigene Logik einfügen
