@@ -77,7 +77,8 @@ import { SfcTestDataProvider } from "./SfcTestData.ts";
 import * as flatbuffers from 'flatbuffers';
 import { OkDialog } from "../dialog_controller.ts";
 import { Severity } from "@klaus-liebler/commons";
-import { RequestWrapper, RequestDebugData, RequestFbdRun, ResponseDebugData, ResponseSfcRun, Responses, ResponseWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
+import { RequestWrapper,RequestSFCRun, RequestDebugData, RequestFbdRun,
+   ResponseDebugData, ResponseSFCRun, Responses, ResponseWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
 
   const TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; //SFC = Sequential Function Chart
   const Namespace = 999;
@@ -158,7 +159,7 @@ export class SfcUI {
   }
 
 
-  // Send SFC jsonFile to server Sollte so passen muss noch getestet werden
+  // Send SFC jsonFile to server,muss noch getestet werden
   private async postSfcFile(path:string, onSuccessAction?:(path:string)=>void, onFailAction?:(path:string)=>void) {
     
             try {
@@ -186,8 +187,6 @@ export class SfcUI {
             }
   }
 
- // constexpr const char *TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; //SFC = Sequential Function Chart
-
   private buildMenu(subcontainer: HTMLDivElement) {
     // Create the menu at the top of the container
     const mm: MenuManager = new MenuManager(
@@ -205,11 +204,11 @@ export class SfcUI {
           new MenuItem("☭ Start Debug", () => this.postSfcFile(TEMPSFC_FILEPATH,
             (p: string) => {
               var b = new flatbuffers.Builder(1024);
-              b.finish(RequestWrapper.createRequestWrapper(b, Requests.RequestSFCRun, RequestFbdRun.createRequestSFCRun(b)));
+              b.finish(RequestWrapper.createRequestWrapper(b,Requests.RequestSFCRun, RequestSFCRun.createRequestSFCRun(b)));
               this.appManagement.SendFinishedBuilder(Namespace, b, 3000);
             },
             (p: string) => {
-              console.error(`As file "${p}" could no be saved on labathome, the RequestFbdRun will not be sent to labathome`)
+              console.error(`As file "${p}" could no be saved on labathome, the RequestSFCRun will not be sent to labathome`);
             }
           )),
           new MenuItem("× Stop Debug", () => null),
