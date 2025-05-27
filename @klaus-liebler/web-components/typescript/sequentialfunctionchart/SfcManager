@@ -29,7 +29,25 @@ export class SfcManager {
     // ...Action zum Step hinzufügen...
   }
 
-  // Weitere Methoden nach Bedarf...
+   getStepByUid(uid: string): SfcStep | undefined {
+    // ...implementieren...
+  }
+
+  addStepAbove(targetUid: string): SfcStep {
+    // ...implementieren...
+  }
+
+  addStepBelow(targetUid: string): SfcStep {
+    // ...implementieren...
+  }
+
+  deleteStep(uid: string): void {
+    // ...implementieren...
+  }
+
+  addActionToStep(stepUid: string, action: SfcAction): void {
+    // ...implementieren...
+  }
 
 }*/
 }

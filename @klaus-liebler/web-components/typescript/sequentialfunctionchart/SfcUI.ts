@@ -118,6 +118,7 @@ export class SfcUI {
   private compiler: SfcCompiler;
   private container?: HTMLDivElement; 
   private webSocket: WebSocket | null = null;
+  sfcManager: any;
 
   constructor(
     private appManagement: IAppManagement,
@@ -647,6 +648,9 @@ private addHoverButtonsToStepName(stepNameDiv: HTMLElement, step: SfcStep): void
   const btnTopRight = Html(stepNameDiv, "button", [], ["step-name-btn", "top-right"], "➕");
   btnTopRight.onclick = () => {
 
+     this.sfcManager.addStepAbove(step.uid);
+    this.RenderUI(); // UI neu rendern
+
 
       //PSEUDOCODE
 /*
@@ -684,6 +688,10 @@ transition t_tmp;
   const btnBottomRight = Html(stepNameDiv, "button", [], ["step-name-btn", "bottom-right"], "➕");
   btnBottomRight.onclick = () => {
 
+    this.sfcManager.addStepBelow(step.uid);
+    this.RenderUI();
+    
+
 
 
 
@@ -691,6 +699,8 @@ transition t_tmp;
     // Beispiel: Neuen Step UNTER dem aktuellen einfügen
     console.log("Neuen Step UNTER", step.uid, "einfügen");
     // Hier eigene Logik einfügen
+    this.sfcManager.addStepBelow(step.uid);
+    this.RenderUI();
   };
 
   // Oben links (−)
@@ -699,6 +709,8 @@ transition t_tmp;
     // Beispiel: Diesen Step löschen
     console.log("Step", step.uid, "löschen");
     // Hier eigene Logik einfügen
+    this.sfcManager.deleteStep(step.uid);
+    this.RenderUI();
   };
 }
 
