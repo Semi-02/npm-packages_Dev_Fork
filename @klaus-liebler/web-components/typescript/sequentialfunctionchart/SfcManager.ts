@@ -4,8 +4,12 @@
   // SfcData für die Daten
   // SfcCompiler zum Verpakcne der Daten fürs absenden an die Platine  
   
-  import { SfcData, SfcStep, SfcTransition, ActionN } from "./SfcData";
-  import { SfcUI } from "./SfcUI";
+import { Severity } from "@klaus-liebler/commons";
+import { OkDialog } from "../dialog_controller";
+import { IAppManagement } from "../utils/interfaces";
+import { SfcCompiler } from "./SfcCompiler";
+import { SfcData, SfcStep, SfcTransition, ActionN } from "./SfcData";
+import { SfcUI } from "./SfcUI";
 
 export class SfcManager {
   constructor(private sfcData: SfcData,private SfcUI:SfcUI) {}
@@ -13,12 +17,11 @@ export class SfcManager {
   /*
   addStepAbove(targetStepUid: string): SfcStep {
     // ...Logik wie im Pseudocode...
-    // Step suchen, neuen Step und Transition erzeugen, Verbindungen anpassen
-    // Rückgabe des neuen Steps
+   
   }
 
   addStepBelow(targetStepUid: string): SfcStep {
-    // ...ähnlich wie oben...
+    
   }
 
   deleteStep(stepUid: string): boolean {
@@ -51,6 +54,43 @@ export class SfcManager {
 
 }*/
 
+
+
+
+
+    async postSfcFile(
+    path: string,
+    sfcData: SfcData,
+    compiler: SfcCompiler,
+    appManagement: IAppManagement,
+    httpServerBasePath: string,
+    onSuccessAction?: (path: string) => void,
+    onFailAction?: (path: string) => void
+    ) {
+    try {
+        const response = await fetch(httpServerBasePath + path, {
+        method: 'POST',
+        body: compiler.compileSfcDataToJson(sfcData),
+        headers: {
+            'Content-Type': 'application/octet-stream'
+        }
+        });
+
+        if (!response.ok) {
+        appManagement.ShowDialog(new OkDialog(Severity.ERROR, `HTTP Error ${response.status}`));
+        if (onFailAction) onFailAction(path);
+        return;
+        }
+
+        appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
+        if (onSuccessAction) onSuccessAction(path);
+
+    } catch (error) {
+        console.error('There was a problem with the post operation:', error);
+        appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Generic Error`));
+        if (onFailAction) onFailAction(path);
+    }
+    }
 
 
 

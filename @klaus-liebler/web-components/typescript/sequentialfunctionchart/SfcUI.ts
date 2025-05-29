@@ -156,35 +156,6 @@ export class SfcUI {
     this.buildView(gridContainer);
   }
 
-
-  // Send SFC jsonFile to server,muss noch getestet werden
-  private async postSfcFile(path:string, onSuccessAction?:(path:string)=>void, onFailAction?:(path:string)=>void) {
-    
-            try {
-                const response = await fetch(this.options.httpServerBasePath + path, {
-                    method: 'POST',
-                    body: this.compiler.compileSfcDataToJson(this.sfcData),
-                    headers: {
-                    'Content-Type': 'application/octet-stream'
-                    }
-                });
-    
-                if (!response.ok) {
-                    this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `HTTP Error ${response.status}`));
-                    if (onFailAction) onFailAction(path);
-                    return;
-                }
-    
-                this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
-                if (onSuccessAction) onSuccessAction(path);
-    
-            } catch (error) {
-                console.error('There was a problem with the post operation:', error);
-                this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Generic Error`));
-                if (onFailAction) onFailAction(path);
-            }
-  }
-
   private buildMenu(subcontainer: HTMLDivElement) {
     // Create the menu at the top of the container
     const mm: MenuManager = new MenuManager(
@@ -199,16 +170,21 @@ export class SfcUI {
         new Menu("Debug", [
           // das ist noch nciht auf den Richtigen Typen eingestellt, über Flattbuffers muss noch "RequestSfcRun" erstellt werden
           // hier testen ob die namespace unterscheidung reicht. 
-          new MenuItem("☭ Start Debug", () => this.postSfcFile(TEMPSFC_FILEPATH,
-            (p: string) => {
-              var b = new flatbuffers.Builder(1024);
-              b.finish(RequestWrapper.createRequestWrapper(b,Requests.RequestSFCRun, RequestSFCRun.createRequestSFCRun(b)));
-              this.appManagement.SendFinishedBuilder(Namespace, b, 3000);
-            },
-            (p: string) => {
-              console.error(`As file "${p}" could no be saved on labathome, the RequestSFCRun will not be sent to labathome`);
-            }
-          )),
+          new MenuItem("☭ Start Debug", () => this.sfcManager.postSfcFile(
+              TEMPSFC_FILEPATH,
+              this.sfcData,
+              this.compiler,
+              this.appManagement,
+              this.options.httpServerBasePath,
+              (p: string) => {
+                var b = new flatbuffers.Builder(1024);
+                b.finish(RequestWrapper.createRequestWrapper(b, Requests.RequestSFCRun, RequestSFCRun.createRequestSFCRun(b)));
+                this.appManagement.SendFinishedBuilder(Namespace, b, 3000);
+              },
+                (p: string) => {
+                  console.error(`As file "${p}" could not be saved on labathome, the RequestSFCRun will not be sent to labathome`);
+                }
+              )),
           new MenuItem("× Stop Debug", () => null),
           new MenuItem("👣 Set as Startup-App", () => null),
           new MenuItem("🧪 Load Test Data", () => {
@@ -690,17 +666,12 @@ transition t_tmp;
 
     this.sfcManager.addStepBelow(step.uid);
     this.RenderUI();
-    
-
-
-
 
 
     // Beispiel: Neuen Step UNTER dem aktuellen einfügen
     console.log("Neuen Step UNTER", step.uid, "einfügen");
     // Hier eigene Logik einfügen
-    this.sfcManager.addStepBelow(step.uid);
-    this.RenderUI();
+  
   };
 
   // Oben links (−)
