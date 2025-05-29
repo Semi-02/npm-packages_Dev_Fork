@@ -5,7 +5,7 @@
   // SfcCompiler zum Verpakcne der Daten fürs absenden an die Platine  
   
   import { SfcData, SfcStep, SfcTransition, ActionN } from "./SfcData";
-  import{ SfcUI } from "./SfcUi";
+  import { SfcUI } from "./SfcUI";
 
 export class SfcManager {
   constructor(private sfcData: SfcData,private SfcUI:SfcUI) {}
@@ -50,4 +50,8 @@ export class SfcManager {
   }
 
 }*/
+
+
+
+
 }
