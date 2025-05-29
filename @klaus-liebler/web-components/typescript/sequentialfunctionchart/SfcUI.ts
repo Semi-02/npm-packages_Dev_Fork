@@ -223,6 +223,17 @@ export class SfcUI {
     // Clear previous content
     diagramContainer.innerHTML = "";
 
+     // === UI-Reset-Button hinzufügen ===
+  const resetBtn = Html(
+    diagramContainer,
+    "button",
+    [],
+    ["ui-reset-btn"],
+    "🔄 UI neu laden",
+   
+  );
+  resetBtn.onclick = () => this.RenderUI();
+
     // Create a CSS grid container for the SFC steps
     const stepsGridContainer = Html(diagramContainer, "div", [], ["steps-grid-container"]);
 

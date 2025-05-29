@@ -260,3 +260,15 @@
   align-items: center;
   justify-content: center;
 }
+
+.ui-reset-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  padding: 6px 12px;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
