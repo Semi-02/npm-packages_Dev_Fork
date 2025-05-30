@@ -6,6 +6,7 @@ import { IAppManagement } from "../utils/interfaces";
 import { RequestSFCRun, RequestWrapper, Requests, } from "@generated/flatbuffers_ts/functionblock";
 import * as flatbuffers from 'flatbuffers';
 import { SFC_NAMESPACE } from "../screen_controller/develop_sfc_controller";
+import "../../style/sfcui.css";
 
 import { SfcTestDataProvider } from "./SfcTestData";
 
@@ -49,14 +50,18 @@ export class SfcUI {
     
     
     container.innerHTML = '';
-   //Container einführen der Unter die Menü Leiste gesetzt wird 
-    this.buildMenu(container);
+    const ViewContainer = Html(container, "div", [], ["view-container"]);
+
+    //Container einführen der Unter die Menü Leiste gesetzt wird 
+    this.buildMenu(ViewContainer);
     //new html das an buildView gegeben wird.
     //DAs neu erstellte dannn mit appenChild an den Container hängen
-    this.buildView(container);
+    this.buildView(ViewContainer);
+
+    container.appendChild(ViewContainer);
   }
   
-  private buildMenu(subcontainer: HTMLDivElement): void {
+  private buildMenu(subcontainer: HTMLElement): void {
     const menuContainer = Html(subcontainer, "div", [], ["sfc-menu-container"]) as HTMLDivElement;
         var mm: MenuManager = new MenuManager(
             [

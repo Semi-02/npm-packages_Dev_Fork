@@ -279,3 +279,45 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+
+.view-container{
+  display: grid;
+  width: 100%;
+  height: 100%;
+  position: relative;
+
+}
+
+
+.sfc-grid-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* 2/3 und 1/3 Aufteilung */
+  grid-template-rows: 1fr;        /* Eine Zeile, volle Höhe */
+  gap: 0px 0px;
+  width: 100%;
+  height: 100%;                   /* Volle Höhe erlauben */
+  position: relative;
+}
+
+.sfc-diagram-section {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sfc-boolean-section {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
