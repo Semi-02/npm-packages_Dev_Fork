@@ -1,51 +1,83 @@
-//************ komplett neu zum testen von neuer Komponente ***************
 import { html } from "lit-html";
-import { ResponseWrapper, ResponseJournal, RequestJournal, RequestWrapper, Requests, Responses, Namespace } from "@generated/flatbuffers_ts/journal";
 import { createRef, ref, Ref } from "lit-html/directives/ref.js";
 import { ScreenController } from "./screen_controller";
 import { IAppManagement } from "../utils/interfaces";
-import * as flatbuffers from "flatbuffers"
-import { SfcUI,SfcOptions,SfcCallback } from "../sequentialfunctionchart/SfcUI";
-import { SfcData,SfcBooleans } from "../sequentialfunctionchart/SfcData";
+import * as flatbuffers from "flatbuffers";
+import { SfcUI, SfcOptions, SfcCallback } from "../sequentialfunctionchart/SfcUI";
+import { SfcData, SfcBooleans } from "../sequentialfunctionchart/SfcData";
+import { SfcCompiler } from "../sequentialfunctionchart/SfcCompiler";
+import { SfcManager } from "../sequentialfunctionchart/SfcManager";
+import { RequestSFCRun, RequestWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
+
+// SFC Namespace für Websocket-Kommunikation
+export const SFC_NAMESPACE = 999;
 
 export class DevelopSFCController extends ScreenController {
+    private mainDiv: Ref<HTMLInputElement> = createRef();
+    private sfcData: SfcData;
+    private sfcUI: SfcUI;
+    private sfcCompiler: SfcCompiler;
+    private sfcManager: SfcManager;
 
-    private mainDiv:Ref<HTMLInputElement> = createRef();
-    private sfcui: SfcUI;
+    // Template für die Anzeige
+    public Template = () => html`<div ${ref(this.mainDiv)} class="develop-ui"></div>`;
 
-    //Object das registiert ist und dessen Änderungen im develop-ui Div angezeigt werden
-    public Template = () => html`<div ${ref(this.mainDiv)} class="develop-ui"></div>`
-
+    // Nachrichtenverarbeitung vom Websocket
     OnMessage(namespace: number, bb: flatbuffers.ByteBuffer): void {
+        if (namespace === SFC_NAMESPACE) {
+            // Hier können eingehende SFC-Nachrichten verarbeitet werden
+            console.log("SFC message received");
+        }
     }
 
+    // Wird aufgerufen, wenn die Komponente zum ersten Mal gestartet wird
     OnFirstStart(): void {
-        // Now we don't need to pass the container each time
-        // Just set it once when the element is available
-        
-        if (this.mainDiv.value && !this.sfcui["container"]) { // Access internal property
-            this.sfcui.setContainer(this.mainDiv.value as HTMLDivElement);
+        if (this.mainDiv.value && !this.sfcUI["container"]) {
+            this.sfcUI.setContainer(this.mainDiv.value as HTMLDivElement);
         }
-        this.sfcui.RenderUI(); // No need to pass container
-    }
-    OnRestart(): void {
-        this.OnFirstStart()
+        this.sfcUI.RenderUI();
     }
     
+    // Wird bei jedem Neustart aufgerufen
+    OnRestart(): void {
+        this.OnFirstStart();
+    }
+    
+    // Wird beim Pausieren aufgerufen
     OnPause(): void {
-       // window.clearInterval(this.timer);
+        // Hier könnten Cleanup-Aufgaben stattfinden
     }
 
+    // Wird bei der Erstellung aufgerufen
     public OnCreate() { }
-   ;
 
-   //To-Do : Datenklassen anpassen an SfcData und Manager
-  constructor(appManagement:IAppManagement, httpServerPrexix="") {
+    // Konstruktor mit Initialisierung aller Komponenten
+    constructor(appManagement: IAppManagement, httpServerPrefix = "") {
         super(appManagement);
-        let data: SfcData = {start:null,steps:[],booleans: null};
-        let options = new SfcOptions(httpServerPrexix);
-        let callbacks = new SfcCallback();
-        this.sfcui = new SfcUI(this.appManagement, data, callbacks, options);
-        this.appManagement.RegisterWebsocketMessageNamespace(this, Namespace.Value);
+        
+        // Erstelle SfcData mit korrekter Initialisierung
+        this.sfcData = new SfcData();
+        
+        // Erstelle SfcBooleans und setze in SfcData
+        this.sfcData.booleans = new SfcBooleans();
+        
+        // Erstelle Optionen und Callbacks
+        const options = new SfcOptions(httpServerPrefix);
+        const callbacks = new SfcCallback();
+        
+        // Erstelle Compiler
+        this.sfcCompiler = new SfcCompiler();
+        
+        // Erstelle UI mit allen Abhängigkeiten
+        this.sfcUI = new SfcUI(this.appManagement, callbacks, options);
+        
+        // Erstelle Manager mit allen Abhängigkeiten
+        this.sfcManager = new SfcManager(this.sfcData, this.sfcUI, this.sfcCompiler, this.appManagement);
+        
+        // Setze Manager-Referenz in UI
+        this.sfcUI.sfcManager = this.sfcManager;
+        
+        // Registriere für Websocket-Nachrichten
+        this.appManagement.RegisterWebsocketMessageNamespace(this, SFC_NAMESPACE);
     }
 }

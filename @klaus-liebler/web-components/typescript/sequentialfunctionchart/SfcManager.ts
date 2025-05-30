@@ -1,97 +1,201 @@
-
- //Im Manager : 
-  // SfcUi für Anzeige und Interaktion
-  // SfcData für die Daten
-  // SfcCompiler zum Verpakcne der Daten fürs absenden an die Platine  
-  
-import { Severity } from "@klaus-liebler/commons";
-import { OkDialog } from "../dialog_controller";
-import { IAppManagement } from "../utils/interfaces";
-import { SfcCompiler } from "./SfcCompiler";
-import { SfcData, SfcStep, SfcTransition, ActionN } from "./SfcData";
+import { SfcData, SfcStep, BaseTransition, SimpleTransition, ActionN } from "./SfcData";
 import { SfcUI } from "./SfcUI";
+import { SfcCompiler } from "./SfcCompiler";
+import { IAppManagement } from "../utils/interfaces";
+import { OkDialog} from "../dialog_controller";
+import { Severity } from "../../../commons";
 
 export class SfcManager {
-  constructor(private sfcData: SfcData,private SfcUI:SfcUI) {}
-
-  /*
-  addStepAbove(targetStepUid: string): SfcStep {
-    // ...Logik wie im Pseudocode...
-   
+  constructor(
+    public sfcData: SfcData,
+    public sfcUI: SfcUI,
+    public sfcCompiler: SfcCompiler,
+    private appManagement: IAppManagement
+  ) {}
+  
+  public createNewStep(caption: string): SfcStep {
+    return new SfcStep(`step-${Date.now()}`, caption);
+  }
+  
+  public addStepAbove(targetUid: string): SfcStep {
+    const targetStep = this.getStepByUid(targetUid);
+    if (!targetStep) return null;
+    
+    const newStep = this.createNewStep("New Step");
+    
+    const incomingTransitions = this.findIncomingTransitions(targetStep);
+    
+    const newTransition = new SimpleTransition(
+      [newStep], 
+      [true], 
+      [targetStep], 
+      ["true"]
+    );
+    
+    newStep.outgoingTransitions.push(newTransition);
+    targetStep.incomingTransitions.push(newTransition);
+    
+    incomingTransitions.forEach(t => {
+      t.target = t.target.map(s => s === targetStep ? newStep : s);
+      
+      if (t.source) {
+        t.source.forEach(sourceStep => {
+          const transIndex = sourceStep.outgoingTransitions.indexOf(t);
+          if (transIndex >= 0) {
+            sourceStep.outgoingTransitions[transIndex].target = t.target;
+          }
+        });
+      }
+    });
+    
+    this.sfcData.steps.push(newStep);
+    
+    if (this.sfcData.start === targetStep) {
+      this.sfcData.start = newStep;
+    }
+    
+    return newStep;
+  }
+  
+  public addStepBelow(targetUid: string): SfcStep {
+    const targetStep = this.getStepByUid(targetUid);
+    if (!targetStep) return null;
+    
+    const newStep = this.createNewStep("New Step");
+    
+    const outgoingTransitions = [...targetStep.outgoingTransitions];
+    
+    const newTransition = new SimpleTransition(
+      [targetStep], 
+      [true], 
+      [newStep], 
+      ["true"]
+    );
+    
+    targetStep.outgoingTransitions = [newTransition];
+    newStep.incomingTransitions.push(newTransition);
+    
+    outgoingTransitions.forEach(t => {
+      t.source = t.source.map(s => s === targetStep ? newStep : s);
+      newStep.outgoingTransitions.push(t);
+      
+      t.target.forEach(targetOfTarget => {
+        const transIndex = targetOfTarget.incomingTransitions.indexOf(t);
+        if (transIndex >= 0) {
+          targetOfTarget.incomingTransitions[transIndex].source = t.source;
+        }
+      });
+    });
+    
+    this.sfcData.steps.push(newStep);
+    
+    return newStep;
+  }
+  
+  public deleteStep(uid: string): void {
+    const step = this.getStepByUid(uid);
+    if (!step) return;
+    
+    if (this.sfcData.start === step) {
+      this.appManagement.ShowDialog(
+        new OkDialog(Severity.ERROR, "Cannot delete start step")
+      );
+      return;
+    }
+    
+    const incomingTransitions = this.findIncomingTransitions(step);
+    const outgoingTransitions = [...step.outgoingTransitions];
+    
+    if (incomingTransitions.length === 1 && outgoingTransitions.length === 1) {
+      const inTrans = incomingTransitions[0];
+      const outTrans = outgoingTransitions[0];
+      
+      inTrans.target = outTrans.target;
+      
+      outTrans.target.forEach(targetStep => {
+        const idx = targetStep.incomingTransitions.indexOf(outTrans);
+        if (idx >= 0) {
+          targetStep.incomingTransitions[idx] = inTrans;
+        }
+      });
+    } else {
+      incomingTransitions.forEach(t => {
+        t.source.forEach(sourceStep => {
+          sourceStep.outgoingTransitions = sourceStep.outgoingTransitions.filter(
+            trans => trans !== t
+          );
+        });
+      });
+      
+      outgoingTransitions.forEach(t => {
+        t.target.forEach(targetStep => {
+          targetStep.incomingTransitions = targetStep.incomingTransitions.filter(
+            trans => trans !== t
+          );
+        });
+      });
+    }
+    
+    const stepIndex = this.sfcData.steps.indexOf(step);
+    if (stepIndex >= 0) {
+      this.sfcData.steps.splice(stepIndex, 1);
+    }
+  }
+  
+  public addActionToStep(stepUid: string, action?: ActionN): void {
+    const step = this.getStepByUid(stepUid);
+    if (!step) return;
+    
+    const newAction = action || new ActionN(`A-${Date.now()}`, "New Action", "newBoolean");
+    step.actions.push(newAction);
+  }
+  
+  public getStepByUid(uid: string): SfcStep | null {
+    return this.sfcData.steps.find(s => s.uid === uid) || null;
+  }
+  
+  private findIncomingTransitions(step: SfcStep): BaseTransition[] {
+    return this.sfcData.steps.flatMap(s => 
+      s.outgoingTransitions.filter(t => 
+        t.target.includes(step)
+      )
+    );
+  }
+  
+  public setSfcData(sfcData: SfcData): void {
+    console.log("Setting SFC Data", sfcData);
+    this.sfcData = sfcData;
+    this.sfcUI.RenderUI();
   }
 
-  addStepBelow(targetStepUid: string): SfcStep {
-    // ...ähnlich wie oben...
-  }
-
-  deleteStep(stepUid: string): boolean {
-    // ...Step und zugehörige Transitions entfernen...
-  }
-
-  addActionToStep(stepUid: string, action: ActionN): void {
-    // ...Action zum Step hinzufügen...
-  }
-
-   getStepByUid(uid: string): SfcStep | undefined {
-    // ...implementieren...
-  }
-
-  addStepAbove(targetUid: string): SfcStep {
-    // ...implementieren...
-  }
-
-  addStepBelow(targetUid: string): SfcStep {
-    // ...implementieren...
-  }
-
-  deleteStep(uid: string): void {
-    // ...implementieren...
-  }
-
-  addActionToStep(stepUid: string, action: SfcAction): void {
-    // ...implementieren...
-  }
-
-}*/
-
-
-
-
-
-    async postSfcFile(
+  public async postSfcFile(
     path: string,
-    sfcData: SfcData,
-    compiler: SfcCompiler,
-    appManagement: IAppManagement,
-    httpServerBasePath: string,
     onSuccessAction?: (path: string) => void,
     onFailAction?: (path: string) => void
-    ) {
+  ): Promise<void> {
     try {
-        const response = await fetch(httpServerBasePath + path, {
+      const jsonData = this.sfcCompiler.Compile(this.sfcData);
+      
+      const response = await fetch(this.sfcUI.options.httpServerBasePath + path, {
         method: 'POST',
-        body: compiler.compileSfcDataToJson(sfcData),
+        body: jsonData,
         headers: {
-            'Content-Type': 'application/octet-stream'
+          'Content-Type': 'application/json'
         }
-        });
-
-        if (!response.ok) {
-        appManagement.ShowDialog(new OkDialog(Severity.ERROR, `HTTP Error ${response.status}`));
+      });
+      
+      if (!response.ok) {
+        this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `HTTP Error ${response.status}`));
         if (onFailAction) onFailAction(path);
         return;
-        }
-
-        appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
-        if (onSuccessAction) onSuccessAction(path);
-
+      }
+      
+      this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved ${path}`);
+      if (onSuccessAction) onSuccessAction(path);
     } catch (error) {
-        console.error('There was a problem with the post operation:', error);
-        appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Generic Error`));
-        if (onFailAction) onFailAction(path);
+      console.error('Problem with post operation:', error);
+      this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Error: ${error.message}`));
+      if (onFailAction) onFailAction(path);
     }
-    }
-
-
-
+  }
 }
