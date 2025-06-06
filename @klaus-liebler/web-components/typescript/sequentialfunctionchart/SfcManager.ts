@@ -5,13 +5,32 @@ import { IAppManagement } from "../utils/interfaces";
 import { OkDialog} from "../dialog_controller";
 import { Severity } from "../../../commons";
 
+//Local Filepaths for SFC Files
+//see devicemanager.hh
+ export const SFCSTORE_BASE_DIRECTORY = "/spiffs/sfcstore/"; 
+ export const TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; 
+ export const DEFAULTSFC_FILEPATH = "/spiffs/defaultsfc.fbd"; 
+
+export class SfcOptions {
+  public httpServerBasePath: string;
+  
+  constructor(httpServerBasePath: string = "/files") {
+    this.httpServerBasePath = httpServerBasePath;
+  }
+}
+
 export class SfcManager {
   constructor(
     public sfcData: SfcData,
     public sfcUI: SfcUI,
     public sfcCompiler: SfcCompiler,
-    private appManagement: IAppManagement
+    private appManagement: IAppManagement,
+    private options: SfcOptions = new SfcOptions()
   ) {}
+
+  
+
+
   
   public createNewStep(caption: string): SfcStep {
     return new SfcStep(`step-${Date.now()}`, caption);
@@ -168,34 +187,56 @@ export class SfcManager {
     this.sfcUI.RenderUI();
   }
 
-  public async postSfcFile(
-    path: string,
-    onSuccessAction?: (path: string) => void,
-    onFailAction?: (path: string) => void
-  ): Promise<void> {
+
+  // Send SFC jsonFile to server Sollte so passen muss noch getestet werden
+  public async postSfcFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
+
     try {
-      const jsonData = this.sfcCompiler.Compile(this.sfcData);
-      
-      const response = await fetch(this.sfcUI.options.httpServerBasePath + path, {
+      const response = await fetch(this.options.httpServerBasePath + path, {
         method: 'POST',
-        body: jsonData,
+        body: this.sfcCompiler.Compile(this.sfcData),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/octet-stream'
         }
       });
-      
+
       if (!response.ok) {
         this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `HTTP Error ${response.status}`));
         if (onFailAction) onFailAction(path);
         return;
       }
-      
-      this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved ${path}`);
+
+      this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
       if (onSuccessAction) onSuccessAction(path);
+
     } catch (error) {
-      console.error('Problem with post operation:', error);
-      this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Error: ${error.message}`));
+      console.error('There was a problem with the post operation:', error);
+      this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Generic Error`));
       if (onFailAction) onFailAction(path);
+    }
+  };
+
+
+
+
+  public async loadSfcFile(path: string): Promise<void> {
+    try {
+      const response = await fetch(this.options.httpServerBasePath + path);
+      if (!response.ok) {
+        throw new Error(`Failed to load file: ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      if (arrayBuffer.byteLength === 0) {
+        console.error(`Error loading file from ${path}: File has size 0`);
+        return;
+      }
+      
+      const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
+      this.setSfcData(sfcData);
+    } catch (error) {
+      this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Failed to load file from ${path}`));
+      console.error(`Error loading file from ${path}:`, error);
     }
   }
 }

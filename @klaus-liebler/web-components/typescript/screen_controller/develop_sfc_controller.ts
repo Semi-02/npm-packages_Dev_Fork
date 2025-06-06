@@ -3,10 +3,10 @@ import { createRef, ref, Ref } from "lit-html/directives/ref.js";
 import { ScreenController } from "./screen_controller";
 import { IAppManagement } from "../utils/interfaces";
 import * as flatbuffers from "flatbuffers";
-import { SfcUI, SfcOptions, SfcCallback } from "../sequentialfunctionchart/SfcUI";
+import { SfcUI, SfcCallback } from "../sequentialfunctionchart/SfcUI";
 import { SfcData, SfcBooleans } from "../sequentialfunctionchart/SfcData";
 import { SfcCompiler } from "../sequentialfunctionchart/SfcCompiler";
-import { SfcManager } from "../sequentialfunctionchart/SfcManager";
+import { SfcManager,SfcOptions } from "../sequentialfunctionchart/SfcManager";
 import { RequestSFCRun, RequestWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
 
 // SFC Namespace für Websocket-Kommunikation
@@ -69,10 +69,10 @@ export class DevelopSFCController extends ScreenController {
         this.sfcCompiler = new SfcCompiler();
         
         // Erstelle UI mit allen Abhängigkeiten
-        this.sfcUI = new SfcUI(this.appManagement, callbacks, options);
+        this.sfcUI = new SfcUI(this.appManagement, callbacks);
         
         // Erstelle Manager mit allen Abhängigkeiten
-        this.sfcManager = new SfcManager(this.sfcData, this.sfcUI, this.sfcCompiler, this.appManagement);
+        this.sfcManager = new SfcManager(this.sfcData, this.sfcUI, this.sfcCompiler, this.appManagement, options);
         
         // Setze Manager-Referenz in UI
         this.sfcUI.sfcManager = this.sfcManager;

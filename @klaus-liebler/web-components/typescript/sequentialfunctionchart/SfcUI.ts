@@ -1,22 +1,17 @@
 import { Html } from "../utils/common";
-import { SfcData } from "./SfcData";
-import { SfcManager } from "./SfcManager";
+import { SfcData, SfcStep } from "./SfcData";
+import { SfcManager,SfcOptions,SFCSTORE_BASE_DIRECTORY,TEMPSFC_FILEPATH,DEFAULTSFC_FILEPATH } from "./SfcManager";
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { IAppManagement } from "../utils/interfaces";
 import { RequestSFCRun, RequestWrapper, Requests, } from "@generated/flatbuffers_ts/functionblock";
 import * as flatbuffers from 'flatbuffers';
 import { SFC_NAMESPACE } from "../screen_controller/develop_sfc_controller";
 import "../../style/sfcui.css";
-
+// Stellt Testdaten bereit
 import { SfcTestDataProvider } from "./SfcTestData";
 
-export class SfcOptions {
-  public httpServerBasePath: string;
-  
-  constructor(httpServerBasePath: string = "") {
-    this.httpServerBasePath = httpServerBasePath;
-  }
-}
+
+
 
 export class SfcCallback {
   public onStepAdded?: (step: any) => void;
@@ -33,8 +28,7 @@ export class SfcUI {
   
   constructor(
     public appManagement: IAppManagement,
-    private callbacks: SfcCallback,
-    public options: SfcOptions
+    private callbacks: SfcCallback
   ) {}
   
   public setContainer(container: HTMLDivElement): void {
@@ -68,14 +62,15 @@ export class SfcUI {
                 new Menu("File", [
                     new MenuItem("📂 Open (Local)", () => null),
                     new MenuItem("📂 Open (labathome)", () => null),
-                    new MenuItem("📂 Open Default (labathome)", () => null),
+                    new MenuItem("📂 Open Default (labathome)", () => this.sfcManager.loadSfcFile(DEFAULTSFC_FILEPATH)),
                     new MenuItem("💾 Save (Local)", () => null),
                     new MenuItem("💾 Save (labathome)", () => null),
-                    new MenuItem("💾 Load Testdata", () => this.sfcManager.setSfcData(SfcTestDataProvider.getTrafficLightSfcData())),
+                    new MenuItem("💾 Load Testdata TrafficLights", () => this.sfcManager.setSfcData(SfcTestDataProvider.getTrafficLightSfcData())),
+                    new MenuItem("💾 Load Testdata", () => this.sfcManager.setSfcData(SfcTestDataProvider.getBasicSfcData())),
                 ]),
                 new Menu("Debug", [
                     new MenuItem("☭ Start Debug", () => 
-                      this.sfcManager.postSfcFile("/spiffs/tempsfc.sfc",
+                      this.sfcManager.postSfcFile(TEMPSFC_FILEPATH,
                         (path) => {
                           const builder = new flatbuffers.Builder(1024);
                           const requestOffset = RequestSFCRun.createRequestSFCRun(builder);
@@ -84,7 +79,7 @@ export class SfcUI {
                         }),
                     ),
                     new MenuItem("× Stop Debug", () => null),
-                    new MenuItem("👣 Set as Startup-App", () => null),
+                    new MenuItem("👣 Set as Startup-App", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
                 ]),
                 new Menu("Simulation", [
                     new MenuItem("➤ Start Simulation", () => null),
@@ -106,7 +101,13 @@ export class SfcUI {
     const diagramSection = Html(diagramContainer, "div", [], ["sfc-diagram-section"]);
     Html(diagramSection, "h3", [], ["diagram-title"], "SFC Diagram");
     
+    const initalStep = new SfcStep("initial", "Initial Step");
+    initalStep.Render(diagramSection,false)
     this.sfcManager.sfcData.Render(diagramSection);
+
+    const endStep = new SfcStep("end", "End Step");
+    endStep.Render(diagramSection,false,false)
+
   }
   
   private buildBooleanField(container: HTMLElement): void {
@@ -117,7 +118,7 @@ export class SfcUI {
   public setSfcData(sfcData?: SfcData): void {
     if (!sfcData) {
       console.error("No SFC data provided to setSfcData");
-      this.sfcManager.setSfcData(SfcTestDataProvider.getBasicSfcData());
+      this.sfcManager.setSfcData(SfcTestDataProvider.getTrafficLightSfcData());
     }
     this.sfcManager.setSfcData(sfcData);
     this.RenderUI();

@@ -13,7 +13,7 @@ export class SfcData {
 
   public Render(container: HTMLElement): void {
     const stepsGridContainer = Html(container, "div", [], ["steps-grid-container"]);
-    
+
     if (this.start) {
       this.buildStepsRecursively(stepsGridContainer, [this.start], 0, new Set());
     }
@@ -34,7 +34,7 @@ export class SfcData {
       const stepElement = step.Render(container);
       stepElement.style.gridRow = `${level + 1}`;
       stepElement.style.gridColumn = `${index + 1}`;
-      
+
       if (step.outgoingTransitions && step.outgoingTransitions.length > 0) {
         step.outgoingTransitions.forEach(transition => {
           if (transition.target) {
@@ -55,27 +55,28 @@ export class SfcData {
 }
 export class SfcBooleans {
   private booleanValues: Map<string, boolean> = new Map<string, boolean>();
-  
+
   constructor() {
     // Initialisiere mit Standardwerten
     this.booleanValues.set("redLed", false);
     this.booleanValues.set("yellowLed", false);
     this.booleanValues.set("greenLed", false);
+
     this.booleanValues.set("merk1", false);
     this.booleanValues.set("merk2", false);
     this.booleanValues.set("merk3", false);
     this.booleanValues.set("merk4", false);
   }
-  
+
   // Getter und Setter für Map-Zugriff
   public get(key: string): boolean {
     return this.booleanValues.get(key) || false;
   }
-  
+
   public set(key: string, value: boolean): void {
     this.booleanValues.set(key, value);
   }
-  
+
   // Für Kompatibilität mit vorhandenem Code
   public getAll(): Record<string, boolean> {
     const result: Record<string, boolean> = {};
@@ -84,28 +85,28 @@ export class SfcBooleans {
     });
     return result;
   }
-  
+
   public Render(container: HTMLElement): void {
     const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"]);
     Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Boolean Values");
-    
+
     // Iteriere über die Map-Einträge
     this.booleanValues.forEach((value, name) => {
       const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
       Html(boolRow, "span", [], ["bool-name"], name);
-      
+
       const selectContainer = Html(boolRow, "div", [], ["bool-value-container"]);
       const select = Html(selectContainer, "select", [], ["bool-value-select"]) as HTMLSelectElement;
-      
+
       const optionTrue = Html(select, "option", ["value", "true"], [], "true") as HTMLOptionElement;
       const optionFalse = Html(select, "option", ["value", "false"], [], "false") as HTMLOptionElement;
-      
+
       if (value === true) {
         optionTrue.selected = true;
       } else {
         optionFalse.selected = true;
       }
-      
+
       select.addEventListener("change", () => {
         const newValue = select.value === "true";
         this.set(name, newValue);
@@ -121,51 +122,57 @@ export class SfcStep {
   public actions: BaseAction[] = [];
   public outgoingTransitions: BaseTransition[] = [];
   public incomingTransitions: BaseTransition[] = [];
-  
+
   constructor(uid: string, caption: string) {
     this.uid = uid;
     this.caption = caption;
   }
-  
-  public Render(container: HTMLElement): HTMLElement {
+
+  public Render(container: HTMLElement, renderActions?: boolean, renderLowerPart?: boolean): HTMLElement {
     const stepContainer = Html(container, "div", [], ["step-container"]);
-    this.renderUpperPart(stepContainer);
-    this.renderLowerPart(stepContainer);
+    this.renderUpperPart(stepContainer, renderActions);
+    if (renderLowerPart === undefined || renderLowerPart === true) {
+      this.renderLowerPart(stepContainer);
+    }
     return stepContainer;
   }
-  
-  private renderUpperPart(container: HTMLElement): void {
+
+  private renderUpperPart(container: HTMLElement, renderActions?: boolean): void {
     const upperPart = Html(container, "div", [], ["step-upper-part"]);
-    
+
     const nameArea = Html(upperPart, "div", [], ["step-name"]);
     nameArea.setAttribute("data-step-uid", this.uid);
     Html(nameArea, "span", [], [], this.caption);
-    
+
     this.addHoverButtonsToStepName(nameArea);
-    
+
+    if (renderActions === undefined || renderActions === true) {
     const bridgeArea = Html(upperPart, "div", [], ["step-bridge"]);
     Html(bridgeArea, "div", [], ["bridge-line"]);
-    
-    const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
-    this.addHoverButtonToStepActions(actionsArea);
-    
-    this.renderActionsTable(actionsArea);
+
+
+      const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
+      this.addHoverButtonToStepActions(actionsArea);
+      this.renderActionsTable(actionsArea);
+    }
+
+
   }
-  
+
   private renderLowerPart(container: HTMLElement): void {
     const lowerPart = Html(container, "div", [], ["step-lower-part"]);
-    
+
     if (this.outgoingTransitions.length > 0) {
       this.outgoingTransitions.forEach(transition => {
         transition.Render(lowerPart);
       });
     }
   }
-  
+
   private renderActionsTable(container: HTMLElement): void {
     const table = Html(container, "table", [], ["actions-table"]);
     const tbody = Html(table, "tbody", [], []);
-    
+
     if (this.actions.length > 0) {
       this.actions.forEach(action => {
         action.Render(tbody);
@@ -226,16 +233,16 @@ export abstract class BaseAction {
   public caption: string;
   public targetBoolean: string;
   public abstract qualifier: string;
-  
+
   constructor(codeUid: string, caption: string, targetBoolean: string) {
     this.codeUid = codeUid;
     this.caption = caption;
     this.targetBoolean = targetBoolean;
   }
-  
+
   public Render(container: HTMLElement): void {
     const actionRow = Html(container, "tr", [], []);
-    
+
     Html(actionRow, "td", [], [], this.qualifier, {
       padding: "4px",
       overflow: "hidden",
@@ -243,7 +250,7 @@ export abstract class BaseAction {
       whiteSpace: "nowrap",
       boxSizing: "border-box"
     });
-    
+
     Html(actionRow, "td", [], [], this.caption, {
       padding: "4px",
       overflow: "hidden",
@@ -283,29 +290,24 @@ export abstract class BaseTransition {
   public sourceDone: boolean[] = [];
   public target: SfcStep[] = [];
   public condition: string[] = [];
-  
+
   constructor(source?: SfcStep[], sourceDone?: boolean[], target?: SfcStep[], condition?: string[]) {
     this.source = source || [];
     this.sourceDone = sourceDone || [];
     this.target = target || [];
     this.condition = condition || [];
   }
-  
+
   public abstract Render(container: HTMLElement): void;
 }
 
 export class SimpleTransition extends BaseTransition {
   public type: string = "simple";
-  
+
   public Render(container: HTMLElement): void {
     const transitionContainer = Html(container, "div", [], ["transition-container"]);
-    
+
     const conditionDisplay = Html(transitionContainer, "div", [], ["transition-condition"]);
     Html(conditionDisplay, "span", [], [], this.condition.join(" && "));
-    
-    const targetDisplay = Html(transitionContainer, "div", [], ["transition-target"]);
-    this.target.forEach(t => {
-      Html(targetDisplay, "span", [], ["target-step"], t.caption);
-    });
   }
 }
