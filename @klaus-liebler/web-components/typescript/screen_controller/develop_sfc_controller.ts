@@ -30,23 +30,25 @@ export class DevelopSFCController extends ScreenController {
         }
     }
 
-    // Wird aufgerufen, wenn die Komponente zum ersten Mal gestartet wird
-    OnFirstStart(): void {
-        if (this.mainDiv.value && !this.sfcUI["container"]) {
-            this.sfcUI.setContainer(this.mainDiv.value as HTMLDivElement);
-        }
+   OnFirstStart(): void {
+    if (this.mainDiv.value) {
+        this.sfcUI.setContainer(this.mainDiv.value as HTMLDivElement);
         this.sfcUI.RenderUI();
     }
-    
-    // Wird bei jedem Neustart aufgerufen
-    OnRestart(): void {
-        this.OnFirstStart();
+}
+
+OnRestart(): void {
+    if (this.mainDiv.value) {
+        this.sfcUI.setContainer(this.mainDiv.value as HTMLDivElement);
+        this.sfcUI.RenderUI();
     }
-    
-    // Wird beim Pausieren aufgerufen
-    OnPause(): void {
-        // Hier könnten Cleanup-Aufgaben stattfinden
+}
+
+OnPause(): void {
+    if (this.mainDiv.value) {
+        this.mainDiv.value.innerHTML = "";
     }
+}
 
     // Wird bei der Erstellung aufgerufen
     public OnCreate() { }
