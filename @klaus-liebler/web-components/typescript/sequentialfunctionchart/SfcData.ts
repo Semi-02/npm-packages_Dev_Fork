@@ -11,11 +11,11 @@ export class SfcData {
     if (start) this.steps.push(start);
   }
 
-  public Render(container: HTMLElement): void {
+  public Render(container: HTMLElement, manager?:any): void {
     const stepsGridContainer = Html(container, "div", [], ["steps-grid-container"]);
 
     if (this.start) {
-      this.buildStepsRecursively(stepsGridContainer, [this.start], 0, new Set());
+      this.buildStepsRecursively(stepsGridContainer, [this.start], 0, new Set(),manager);
     }
   }
 
@@ -23,7 +23,8 @@ export class SfcData {
     container: HTMLElement,
     steps: SfcStep[],
     level: number,
-    visitedSteps: Set<string>
+    visitedSteps: Set<string>,
+    manager?:any
   ): void {
     const nextLevelSteps: SfcStep[] = [];
 
@@ -31,7 +32,7 @@ export class SfcData {
       if (!step || visitedSteps.has(step.uid)) return;
       visitedSteps.add(step.uid);
 
-      const stepElement = step.Render(container);
+      const stepElement = step.Render(container,true,true,manager);
       stepElement.style.gridRow = `${level + 1}`;
       stepElement.style.gridColumn = `${index + 1}`;
 
@@ -49,7 +50,7 @@ export class SfcData {
     });
 
     if (nextLevelSteps.length > 0) {
-      this.buildStepsRecursively(container, nextLevelSteps, level + 1, visitedSteps);
+      this.buildStepsRecursively(container, nextLevelSteps, level + 1, visitedSteps,manager);
     }
   }
 }
@@ -128,23 +129,23 @@ export class SfcStep {
     this.caption = caption;
   }
 
-  public Render(container: HTMLElement, renderActions?: boolean, renderLowerPart?: boolean): HTMLElement {
+  public Render(container: HTMLElement, renderActions?: boolean, renderLowerPart?: boolean, manager?:any): HTMLElement {
     const stepContainer = Html(container, "div", [], ["step-container"]);
-    this.renderUpperPart(stepContainer, renderActions);
+    this.renderUpperPart(stepContainer, renderActions,manager);
     if (renderLowerPart === undefined || renderLowerPart === true) {
       this.renderLowerPart(stepContainer);
     }
     return stepContainer;
   }
 
-  private renderUpperPart(container: HTMLElement, renderActions?: boolean): void {
+  private renderUpperPart(container: HTMLElement, renderActions?: boolean,manager?:any): void {
     const upperPart = Html(container, "div", [], ["step-upper-part"]);
 
     const nameArea = Html(upperPart, "div", [], ["step-name"]);
     nameArea.setAttribute("data-step-uid", this.uid);
     Html(nameArea, "span", [], [], this.caption);
 
-    this.addHoverButtonsToStepName(nameArea);
+    this.addHoverButtonsToStepName(nameArea,manager);
 
     if (renderActions === undefined || renderActions === true) {
     const bridgeArea = Html(upperPart, "div", [], ["step-bridge"]);
@@ -208,22 +209,44 @@ export class SfcStep {
     hoverButton.addEventListener("mouseleave", hideButton);
   }
 
-  private addHoverButtonsToStepName(stepNameDiv: HTMLElement): void {
+  private addHoverButtonsToStepName(stepNameDiv: HTMLElement,manager?:any): void {
     stepNameDiv.style.position = "relative";
 
     const btnTopRight = Html(stepNameDiv, "button", [], ["step-name-btn", "top-right"], "➕");
     btnTopRight.onclick = () => {
       console.log("Neuen Step ÜBER", this.uid, "einfügen");
+      //ERGÄNZUNG FÜR NEW STEPS IN SFC
+        if (!manager) {
+          console.error("Manager is not defined");
+          return;
+        }
+       manager.addStepAbove(this.uid);
+       manager.sfcUI.RenderUI();
     };
 
     const btnBottomRight = Html(stepNameDiv, "button", [], ["step-name-btn", "bottom-right"], "➕");
     btnBottomRight.onclick = () => {
       console.log("Neuen Step UNTER", this.uid, "einfügen");
+      //ERGÄNZUNG FÜR NEW STEPS IN SFC
+        if (!manager) {
+          console.error("Manager is not defined");
+          return;
+        }
+        
+        manager.addStepBelow(this.uid);
+        manager.sfcUI.RenderUI();
     };
 
     const btnTopLeft = Html(stepNameDiv, "button", [], ["step-name-btn", "top-left"], "−");
     btnTopLeft.onclick = () => {
       console.log("Step", this.uid, "löschen");
+      //ERGÄNZUNG FÜR DELETE STEPS IN SFC
+        if (!manager) {
+          console.error("Manager is not defined");
+          return;
+        }	
+        manager.deleteStep(this.uid);
+        manager.sfcUI.RenderUI();
     };
   }
 }
