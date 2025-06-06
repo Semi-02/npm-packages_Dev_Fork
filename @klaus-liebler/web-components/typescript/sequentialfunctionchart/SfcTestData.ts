@@ -81,4 +81,72 @@ export class SfcTestDataProvider {
     
     return sfcData;
   }
+
+
+  public static getTrafficLightSfcData(): SfcData {
+    // Erstelle Booleans für Ampel und Timer
+    const booleans = new SfcBooleans();
+    
+    // Ampelzustände
+    const redStep = new SfcStep("step1", "Rot Phase");
+    redStep.actions.push(new ActionS0("act1_1", "Rot einschalten", "redLight"));
+    redStep.actions.push(new ActionN("act1_2", "Gelb ausschalten", "yellowLight"));
+    redStep.actions.push(new ActionN("act1_3", "Grün ausschalten", "greenLight"));
+    redStep.actions.push(new ActionSD("act1_4", "Timer starten", "redTimer"));
+    
+    const redYellowStep = new SfcStep("step2", "Rot-Gelb Phase");
+    redYellowStep.actions.push(new ActionS0("act2_1", "Rot einschalten", "redLight"));
+    redYellowStep.actions.push(new ActionS0("act2_2", "Gelb einschalten", "yellowLight"));
+    redYellowStep.actions.push(new ActionN("act2_3", "Grün ausschalten", "greenLight"));
+    redYellowStep.actions.push(new ActionSD("act2_4", "Timer starten", "redYellowTimer"));
+    
+    const greenStep = new SfcStep("step3", "Grün Phase");
+    greenStep.actions.push(new ActionN("act3_1", "Rot ausschalten", "redLight"));
+    greenStep.actions.push(new ActionN("act3_2", "Gelb ausschalten", "yellowLight"));
+    greenStep.actions.push(new ActionS0("act3_3", "Grün einschalten", "greenLight"));
+    greenStep.actions.push(new ActionSD("act3_4", "Timer starten", "greenTimer"));
+    
+    const yellowStep = new SfcStep("step4", "Gelb Phase");
+    yellowStep.actions.push(new ActionN("act4_1", "Rot ausschalten", "redLight"));
+    yellowStep.actions.push(new ActionS0("act4_2", "Gelb einschalten", "yellowLight"));
+    yellowStep.actions.push(new ActionN("act4_3", "Grün ausschalten", "greenLight"));
+    yellowStep.actions.push(new ActionSD("act4_4", "Timer starten", "yellowTimer"));
+    
+    // Transitionen zwischen den Steps
+    const redToRedYellow = new SimpleTransition(
+      [redStep], [true], [redYellowStep], ["redTimer == true"]
+    );
+    
+    const redYellowToGreen = new SimpleTransition(
+      [redYellowStep], [true], [greenStep], ["redYellowTimer == true"]
+    );
+    
+    const greenToYellow = new SimpleTransition(
+      [greenStep], [true], [yellowStep], ["greenTimer == true"]
+    );
+    
+    const yellowToRed = new SimpleTransition(
+      [yellowStep], [true], [redStep], ["yellowTimer == true"]
+    );
+    
+    // Verbinde Steps mit Transitionen
+    redStep.outgoingTransitions.push(redToRedYellow);
+    
+    redYellowStep.incomingTransitions.push(redToRedYellow);
+    redYellowStep.outgoingTransitions.push(redYellowToGreen);
+    
+    greenStep.incomingTransitions.push(redYellowToGreen);
+    greenStep.outgoingTransitions.push(greenToYellow);
+    
+    yellowStep.incomingTransitions.push(greenToYellow);
+    yellowStep.outgoingTransitions.push(yellowToRed);
+    
+    redStep.incomingTransitions.push(yellowToRed);
+    
+    // Erstelle und gib SfcData zurück
+    const sfcData = new SfcData(redStep, booleans);
+    sfcData.steps = [redStep, redYellowStep, greenStep, yellowStep];
+    
+    return sfcData;
+  }
 }

@@ -71,7 +71,7 @@ export class SfcUI {
                     new MenuItem("📂 Open Default (labathome)", () => null),
                     new MenuItem("💾 Save (Local)", () => null),
                     new MenuItem("💾 Save (labathome)", () => null),
-                    new MenuItem("💾 Load Testdata", () => this.sfcManager.setSfcData(SfcTestDataProvider.getBasicSfcData())),
+                    new MenuItem("💾 Load Testdata", () => this.sfcManager.setSfcData(SfcTestDataProvider.getTrafficLightSfcData())),
                 ]),
                 new Menu("Debug", [
                     new MenuItem("☭ Start Debug", () => 
