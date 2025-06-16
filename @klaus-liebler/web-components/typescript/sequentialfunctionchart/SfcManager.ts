@@ -1,4 +1,4 @@
-import { SfcData, SfcStep, BaseTransition, SimpleTransition, ActionN } from "./SfcData";
+import { SfcData, SfcStep, BaseTransition, SimpleTransition, ActionN, BaseAction } from "./SfcData";
 import { SfcUI } from "./SfcUI";
 import { SfcCompiler } from "./SfcCompiler";
 import { IAppManagement } from "../utils/interfaces";
@@ -8,27 +8,31 @@ import { Severity } from "../../../commons";
 //Local Filepaths for SFC Files
 //see devicemanager.hh
  export const SFCSTORE_BASE_DIRECTORY = "/spiffs/sfcstore/"; 
- export const TEMPSFC_FILEPATH = "/spiffs/tempsfc.fbd"; 
- export const DEFAULTSFC_FILEPATH = "/spiffs/defaultsfc.fbd"; 
+ export const TEMPSFC_FILEPATH = "/spiffs/tempsfc.json"; 
+ export const DEFAULTSFC_FILEPATH = "/spiffs/defaultsfc.json"; 
 
 export class SfcOptions {
-  public httpServerBasePath: string;
+    httpServerBasePath="/files"
   
-  constructor(httpServerBasePath: string = "/files") {
-    this.httpServerBasePath = httpServerBasePath;
+  constructor(httpServerPrexix:string) {
+    this.httpServerBasePath=httpServerPrexix+this.httpServerBasePath;
   }
 }
 
 export class SfcManager {
+private static instance: SfcManager;
   constructor(
     public sfcData: SfcData,
     public sfcUI: SfcUI,
     public sfcCompiler: SfcCompiler,
     private appManagement: IAppManagement,
-    private options: SfcOptions = new SfcOptions()
-  ) {}
-
-  
+    private options: SfcOptions = new SfcOptions(""),
+    
+  ) {
+  }
+public static getInstance(): SfcManager {
+  return SfcManager.instance;
+}
 
 
   
@@ -161,7 +165,7 @@ export class SfcManager {
     }
   }
   
-  public addActionToStep(stepUid: string, action?: ActionN): void {
+  public addActionToStep(stepUid: string, action?: BaseAction): void {
     const step = this.getStepByUid(stepUid);
     if (!step) return;
     
@@ -184,10 +188,21 @@ export class SfcManager {
   public setSfcData(sfcData: SfcData): void {
     console.log("Setting SFC Data", sfcData);
     this.sfcData = sfcData;
-    this.sfcUI.RenderUI();
+    this.updateSfcData();
   }
 
+public notifyChange(): void {
 
+  this.updateSfcData();
+
+}
+
+private updateSfcData(): void {
+  // Update UI if needed
+  if (this.sfcUI) {
+    this.sfcUI.RenderUI();
+  }
+}
   // Send SFC jsonFile to server Sollte so passen muss noch getestet werden
   public async postSfcFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
 
@@ -196,7 +211,7 @@ export class SfcManager {
         method: 'POST',
         body: this.sfcCompiler.Compile(this.sfcData),
         headers: {
-          'Content-Type': 'application/octet-stream'
+          'Content-Type': 'application/json'
         }
       });
 
@@ -216,10 +231,7 @@ export class SfcManager {
     }
   };
 
-
-
-
-  public async loadSfcFile(path: string): Promise<void> {
+  public async loadSfcFile(path: string){
     try {
       const response = await fetch(this.options.httpServerBasePath + path);
       if (!response.ok) {
@@ -231,7 +243,8 @@ export class SfcManager {
         console.error(`Error loading file from ${path}: File has size 0`);
         return;
       }
-      
+      console.log(`Loaded file from ${path} with size: ${arrayBuffer.byteLength} bytes`);
+      console.log("ArrayBuffer:", arrayBuffer);
       const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
       this.setSfcData(sfcData);
     } catch (error) {

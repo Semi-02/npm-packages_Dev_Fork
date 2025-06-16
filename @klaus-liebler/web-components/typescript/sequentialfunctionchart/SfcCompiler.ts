@@ -6,17 +6,99 @@ export class SfcCompiler {
   public Compile(sfcData: SfcData): string {
     return this.convertSfcDataToDto(sfcData);
   }
-
-  public compileJSONtoSfcData(arrayBuffer): SfcData {
-    console.log("Compiling JSON to SFC Data");
-    console.log("arraybuffer:", arrayBuffer);
-    const json = this.parseSfcFile(arrayBuffer);
-    console.log("JSON Input:", json);
-    // Erstellen Sie eine neue SfcData-Instanz
-    var tmp = new SfcData();
-
-    return tmp;
+public compileJSONtoSfcData(arrayBuffer): SfcData {
+  console.log("Compiling JSON to SFC Data");
+  
+  // Try to parse the file content as plain JSON first
+  try {
+    const jsonString = new TextDecoder().decode(arrayBuffer);
+    const dto = JSON.parse(jsonString);
+    console.log("Parsed JSON:", dto);
+    
+    // Create a new SfcData instance
+    const booleans = new SfcBooleans();
+    if (dto.booleans) {
+      Object.entries(dto.booleans).forEach(([key, value]) => {
+        booleans.set(key, value as boolean);
+      });
+    }
+    
+    // Create step objects
+    const stepsMap = new Map<string, SfcStep>();
+    if (dto.steps && Array.isArray(dto.steps)) {
+      dto.steps.forEach(stepDto => {
+        const step = new SfcStep(stepDto.uid, stepDto.caption);
+        
+        // Add actions
+        if (stepDto.actions && Array.isArray(stepDto.actions)) {
+          stepDto.actions.forEach(actionDto => {
+            let action: BaseAction;
+            switch (actionDto.qualifier) {
+              case "N": action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "S0": action = new ActionS0(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "L": action = new ActionL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "D": action = new ActionD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "P": action = new ActionP(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "SD": action = new ActionSD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              default: action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+            }
+            step.actions.push(action);
+          });
+        }
+        
+        stepsMap.set(step.uid, step);
+      });
+      
+      // Add transitions
+      dto.steps.forEach(stepDto => {
+        const step = stepsMap.get(stepDto.uid);
+        if (!step) return;
+        
+        if (stepDto.outgoingTransitions && Array.isArray(stepDto.outgoingTransitions)) {
+          stepDto.outgoingTransitions.forEach(transDto => {
+            const sourceSteps = transDto.source.map(uid => stepsMap.get(uid)).filter(s => s !== undefined) as SfcStep[];
+            const targetSteps = transDto.target.map(uid => stepsMap.get(uid)).filter(t => t !== undefined) as SfcStep[];
+            
+            let transition: BaseTransition;
+            if (transDto.type === "simple") {
+              transition = new SimpleTransition(sourceSteps, transDto.sourceDone, targetSteps, transDto.condition);
+            } else {
+              transition = new SimpleTransition(sourceSteps, transDto.sourceDone, targetSteps, transDto.condition);
+            }
+            
+            step.outgoingTransitions.push(transition);
+            
+            // Add incoming transitions to target steps
+            targetSteps.forEach(targetStep => {
+              targetStep.incomingTransitions.push(transition);
+            });
+          });
+        }
+      });
+    }
+    
+    // Find the start step
+    const startStep = stepsMap.get(dto.start) || null;
+    
+    // Create and return the SfcData object
+    const sfcData = new SfcData(startStep, booleans);
+    sfcData.steps = Array.from(stepsMap.values());
+    
+    return sfcData;
+  } catch (e) {
+    console.error("Error parsing JSON data:", e);
+    
+    // Fallback to trying the binary+JSON format
+    try {
+      const parsedData = this.parseSfcFile(arrayBuffer);
+      return parsedData;
+    } catch (e2) {
+      console.error("Error parsing binary+JSON format:", e2);
+      // Return an empty SfcData as fallback
+      return new SfcData();
+    }
   }
+}
 
   private parseSfcFile(arrayBuffer: ArrayBuffer): SfcData {
     const dataView = new DataView(arrayBuffer);

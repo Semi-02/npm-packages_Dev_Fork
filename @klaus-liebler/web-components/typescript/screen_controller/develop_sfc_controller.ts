@@ -6,8 +6,8 @@ import * as flatbuffers from "flatbuffers";
 import { SfcUI, SfcCallback } from "../sequentialfunctionchart/SfcUI";
 import { SfcData, SfcBooleans } from "../sequentialfunctionchart/SfcData";
 import { SfcCompiler } from "../sequentialfunctionchart/SfcCompiler";
-import { SfcManager,SfcOptions } from "../sequentialfunctionchart/SfcManager";
-import { RequestSFCRun, RequestWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
+import { SfcManager,SfcOptions,DEFAULTSFC_FILEPATH } from "../sequentialfunctionchart/SfcManager";
+
 
 // SFC Namespace für Websocket-Kommunikation
 export const SFC_NAMESPACE = 999;
@@ -31,6 +31,8 @@ export class DevelopSFCController extends ScreenController {
     }
 
    OnFirstStart(): void {
+       // Optionally, load the default SFC file asynchronously after construction
+    this.sfcManager.loadSfcFile(DEFAULTSFC_FILEPATH);
     if (this.mainDiv.value) {
         this.sfcUI.setContainer(this.mainDiv.value as HTMLDivElement);
         this.sfcUI.RenderUI();

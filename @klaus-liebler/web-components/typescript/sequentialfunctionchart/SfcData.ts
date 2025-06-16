@@ -1,4 +1,5 @@
 import { Html } from "../utils/common";
+import { SfcManager } from "./SfcManager";
 
 export class SfcData {
   public start: SfcStep;
@@ -251,11 +252,13 @@ export class SfcStep {
   }
 }
 
+
 export abstract class BaseAction {
   public codeUid: string;
   public caption: string;
   public targetBoolean: string;
   public abstract qualifier: string;
+  
 
   constructor(codeUid: string, caption: string, targetBoolean: string) {
     this.codeUid = codeUid;
@@ -264,6 +267,9 @@ export abstract class BaseAction {
   }
 
   public Render(container: HTMLElement, step?: SfcStep): void {
+
+     var sfc = SfcManager.getInstance();
+
     const actionRow = Html(container, "tr", [], []);
 
     // Dropdown für Action-Typen
@@ -293,14 +299,16 @@ export abstract class BaseAction {
     const tdTarget = Html(actionRow, "td", [], []);
     const selectTarget = Html(tdTarget, "select", [], ["target-boolean-select"]) as HTMLSelectElement;
 
-    // Hole Boolean-Namen aus Step/SfcData --> das kann ja gar nicht funktionieren bullshit.
+    // Hole Boolean-Namen aus Step/SfcData
     let booleanKeys: string[] = [];
-    if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
-        booleanKeys = Object.keys((step as any).parentSfcData.booleans.getAll());
-    } else if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
+    
+    // Try to get boolean keys from the SfcManager
+    if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
         booleanKeys = Object.keys((window as any).sfcManager.sfcData.booleans.getAll());
+    } else if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
+        booleanKeys = Object.keys((step as any).parentSfcData.booleans.getAll());
     }
-    //________________________________
+    
     // Fallback: Standardwerte
     if (booleanKeys.length === 0) {
         booleanKeys = ["redLed", "yellowLed", "greenLed", "merk1", "merk2", "merk3", "merk4"];
@@ -313,30 +321,37 @@ export abstract class BaseAction {
 
     selectTarget.addEventListener("change", () => {
       this.targetBoolean = selectTarget.value;
+      
+      // Notify SfcManager if available
+      sfc.notifyChange();
+
     });
 
     // Typwechsel-Handler
     select.addEventListener("change", () => {
       if (this.qualifier === select.value) return;
+      console.log(`Changing action type from ${this.qualifier} to ${select.value}`);
       if (step) {
         const idx = step.actions.indexOf(this);
         if (idx >= 0) {
           // Aktuelle Werte übernehmen
           const newCaption = input.value;
+          console.log(`Changing caption to: ${newCaption}`);
           const newTarget = selectTarget.value;
+          console.log(`Changing targetBoolean to: ${newTarget}`);
+          
           // Neue Action-Instanz mit aktuellem Typ
           const newAction = new (actionTypes.find(t => t.label === select.value)!.classRef)(
             this.codeUid,
             newCaption,
             newTarget
           );
-          step.actions[idx] = newAction;
-          // Tabelle neu rendern
-          const tableBody = container.closest("tbody");
-          if (tableBody) {
-            tableBody.innerHTML = "";
-            step.actions.forEach(a => a.Render(tableBody as HTMLElement, step));
-          }
+          
+         
+          sfc.addActionToStep(step.uid, newAction);
+          // Notify SfcManager of the change
+          sfc.notifyChange();
+          
         }
       }
     });
@@ -344,9 +359,14 @@ export abstract class BaseAction {
     // Caption-Handler
     input.addEventListener("change", () => {
       this.caption = input.value;
+      
+      // Notify SfcManager if available
+       sfc.notifyChange();
     });
-}
   }
+  
+
+}
 
 
 
