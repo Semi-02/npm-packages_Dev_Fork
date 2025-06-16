@@ -176,7 +176,7 @@ export class SfcStep {
 
     if (this.actions.length > 0) {
       this.actions.forEach(action => {
-        action.Render(tbody);
+        action.Render(tbody, this);
       });
     }
   }
@@ -263,24 +263,67 @@ export abstract class BaseAction {
     this.targetBoolean = targetBoolean;
   }
 
-  public Render(container: HTMLElement): void {
+  public Render(container: HTMLElement, step?: SfcStep): void {
     const actionRow = Html(container, "tr", [], []);
 
-    Html(actionRow, "td", [], [], this.qualifier, {
-      padding: "4px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      boxSizing: "border-box"
+    // Dropdown für Action-Typen
+    const tdType = Html(actionRow, "td", [], []);
+    const select = Html(tdType, "select", [], ["action-type-select"]) as HTMLSelectElement;
+    const actionTypes = [
+      { label: "N", classRef: ActionN },
+      { label: "S0", classRef: ActionS0 },
+      { label: "L", classRef: ActionL },
+      { label: "D", classRef: ActionD },
+      { label: "P", classRef: ActionP },
+      { label: "SD", classRef: ActionSD }
+    ];
+
+    actionTypes.forEach(type => {
+      const option = Html(select, "option", ["value", type.label], [], type.label) as HTMLOptionElement;
+      if (this.qualifier === type.label) option.selected = true;
     });
 
-    Html(actionRow, "td", [], [], this.caption, {
-      padding: "4px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      boxSizing: "border-box"
+    select.addEventListener("change", () => {
+      if (this.qualifier === select.value) return;
+      // Action im Step ersetzen
+      if (step) {
+        const idx = step.actions.indexOf(this);
+        if (idx >= 0) {
+          // Neue Action-Instanz mit gleichem codeUid, caption, targetBoolean
+          const newAction = new (actionTypes.find(t => t.label === select.value)!.classRef)(
+            this.codeUid,
+            this.caption,
+            this.targetBoolean
+          );
+          step.actions[idx] = newAction;
+          // Tabelle neu rendern
+          const tableBody = container.closest("tbody");
+          if (tableBody) {
+            tableBody.innerHTML = "";
+            step.actions.forEach(a => a.Render(tableBody as HTMLElement, step));
+          }
+        }
+      }
     });
+
+    // Editierbares Feld für Caption (Name)
+    const tdCaption = Html(actionRow, "td", [], []);
+    const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
+    input.value = this.caption;
+    input.style.width = "95%";
+    input.addEventListener("change", () => {
+      this.caption = input.value;
+      // Optional: Tabelle neu rendern, falls du sofortige Aktualisierung willst
+      if (step) {
+        const tableBody = container.closest("tbody");
+        if (tableBody) {
+          tableBody.innerHTML = "";
+          step.actions.forEach(a => a.Render(tableBody as HTMLElement, step));
+        }
+      }
+    });
+
+    // ...weitere Spalten wie bisher...
   }
 }
 
