@@ -283,17 +283,52 @@ export abstract class BaseAction {
       if (this.qualifier === type.label) option.selected = true;
     });
 
+    // Editierbares Feld für Caption (Name)
+    const tdCaption = Html(actionRow, "td", [], []);
+    const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
+    input.value = this.caption;
+    input.style.width = "95%";
+
+    // Dropdown für targetBoolean
+    const tdTarget = Html(actionRow, "td", [], []);
+    const selectTarget = Html(tdTarget, "select", [], ["target-boolean-select"]) as HTMLSelectElement;
+
+    // Hole Boolean-Namen aus Step/SfcData --> das kann ja gar nicht funktionieren bullshit.
+    let booleanKeys: string[] = [];
+    if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
+        booleanKeys = Object.keys((step as any).parentSfcData.booleans.getAll());
+    } else if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
+        booleanKeys = Object.keys((window as any).sfcManager.sfcData.booleans.getAll());
+    }
+    //________________________________
+    // Fallback: Standardwerte
+    if (booleanKeys.length === 0) {
+        booleanKeys = ["redLed", "yellowLed", "greenLed", "merk1", "merk2", "merk3", "merk4"];
+    }
+
+    booleanKeys.forEach(key => {
+      const option = Html(selectTarget, "option", ["value", key], [], key) as HTMLOptionElement;
+      if (this.targetBoolean === key) option.selected = true;
+    });
+
+    selectTarget.addEventListener("change", () => {
+      this.targetBoolean = selectTarget.value;
+    });
+
+    // Typwechsel-Handler
     select.addEventListener("change", () => {
       if (this.qualifier === select.value) return;
-      // Action im Step ersetzen
       if (step) {
         const idx = step.actions.indexOf(this);
         if (idx >= 0) {
-          // Neue Action-Instanz mit gleichem codeUid, caption, targetBoolean
+          // Aktuelle Werte übernehmen
+          const newCaption = input.value;
+          const newTarget = selectTarget.value;
+          // Neue Action-Instanz mit aktuellem Typ
           const newAction = new (actionTypes.find(t => t.label === select.value)!.classRef)(
             this.codeUid,
-            this.caption,
-            this.targetBoolean
+            newCaption,
+            newTarget
           );
           step.actions[idx] = newAction;
           // Tabelle neu rendern
@@ -306,26 +341,14 @@ export abstract class BaseAction {
       }
     });
 
-    // Editierbares Feld für Caption (Name)
-    const tdCaption = Html(actionRow, "td", [], []);
-    const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
-    input.value = this.caption;
-    input.style.width = "95%";
+    // Caption-Handler
     input.addEventListener("change", () => {
       this.caption = input.value;
-      // Optional: Tabelle neu rendern, falls du sofortige Aktualisierung willst
-      if (step) {
-        const tableBody = container.closest("tbody");
-        if (tableBody) {
-          tableBody.innerHTML = "";
-          step.actions.forEach(a => a.Render(tableBody as HTMLElement, step));
-        }
-      }
     });
-
-    // ...weitere Spalten wie bisher...
-  }
 }
+  }
+
+
 
 export class ActionN extends BaseAction {
   public qualifier: string = "N";
