@@ -143,21 +143,42 @@ export class SfcStep {
 
     const nameArea = Html(upperPart, "div", [], ["step-name"]);
     nameArea.setAttribute("data-step-uid", this.uid);
-    Html(nameArea, "span", [], [], this.caption);
+
+    // Mach das Step-Name-Span editierbar
+    const nameSpan = Html(nameArea, "span", [], [], this.caption) as HTMLSpanElement;
+    nameSpan.contentEditable = "true";
+    nameSpan.style.outline = "none";
+    nameSpan.title = "Klicken zum Bearbeiten";
+
+    // Speichern bei Verlassen des Feldes oder Enter
+    const saveCaption = () => {
+      const newCaption = nameSpan.innerText.trim();
+      if (newCaption !== this.caption) {
+        this.caption = newCaption;
+        // Optional: Manager/UI benachrichtigen
+        if (manager && typeof manager.notifyChange === "function") {
+          manager.notifyChange();
+        }
+      }
+    };
+    nameSpan.addEventListener("blur", saveCaption);
+    nameSpan.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        nameSpan.blur();
+      }
+    });
 
     this.addHoverButtonsToStepName(nameArea,manager);
 
     if (renderActions === undefined || renderActions === true) {
-    const bridgeArea = Html(upperPart, "div", [], ["step-bridge"]);
-    Html(bridgeArea, "div", [], ["bridge-line"]);
-
+      const bridgeArea = Html(upperPart, "div", [], ["step-bridge"]);
+      Html(bridgeArea, "div", [], ["bridge-line"]);
 
       const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
       this.addHoverButtonToStepActions(actionsArea);
       this.renderActionsTable(actionsArea);
     }
-
-
   }
 
   private renderLowerPart(container: HTMLElement): void {
