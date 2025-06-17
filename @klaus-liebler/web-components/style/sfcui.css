@@ -74,7 +74,7 @@
 }
 
 .diagram-container {
-  flex: 2;
+  flex: 4;
   border: 1px solid #ccc;
   padding: 16px;
   overflow-y: auto;
@@ -103,10 +103,11 @@
   flex-direction: column;
   gap: 8px;
   width: 100%;
+  padding-left: 5px;
 }
 
 .boolean-title {
-  margin: 0 0 12px 0;
+  margin: 18.72px 0 12px 0;
   padding: 0 0 8px 0;
   border-bottom: 1px solid #ddd;
 }
@@ -354,11 +355,15 @@
   grid-column: 2 / 3;
   grid-row: 1 / 2;
   height: 100%;
-  min-width: 0;
+  max-width: 200px;
   min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
+  margin-right: 0;
+  margin-left: auto;
+  min-width: 150px;
+  border-left-style: outset;
 }
 
 
