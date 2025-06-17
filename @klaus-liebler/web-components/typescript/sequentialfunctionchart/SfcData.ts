@@ -1,5 +1,4 @@
 import { Html } from "../utils/common";
-import { SfcManager } from "./SfcManager";
 
 export class SfcData {
   public start: SfcStep;
@@ -183,7 +182,7 @@ export class SfcStep {
   }
 
   private addHoverButtonToStepActions(stepActionsContainer: HTMLElement): void {
-    const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "Add Action");
+    const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "➕");
     hoverButton.style.display = "none";
 
     hoverButton.addEventListener("click", () => {
@@ -192,11 +191,11 @@ export class SfcStep {
 
       const tableBody = stepActionsContainer.querySelector('.actions-table tbody');
       if (tableBody) {
-        newAction.Render(tableBody as HTMLElement);
+        newAction.Render(tableBody as HTMLElement, this);
       }
     });
 
-    const showButton = () => { hoverButton.style.display = "block"; };
+    const showButton = () => { hoverButton.style.display = "flex"; };
     const hideButton = (event: MouseEvent) => {
       const relatedTarget = event.relatedTarget as HTMLElement;
       if (!stepActionsContainer.contains(relatedTarget) && relatedTarget !== hoverButton) {
@@ -238,8 +237,10 @@ export class SfcStep {
         manager.sfcUI.RenderUI();
     };
 
-    const btnTopLeft = Html(stepNameDiv, "button", [], ["step-name-btn", "top-left"], "−");
+    const btnTopLeft = Html(stepNameDiv, "button", [], ["step-name-btn", "top-left"], "✕");
     btnTopLeft.onclick = () => {
+      // Sicherheitsabfrage vor dem Löschen
+      if (!window.confirm("Sind Sie sicher, dass Sie diesen Step löschen möchten?")) return;
       console.log("Step", this.uid, "löschen");
       //ERGÄNZUNG FÜR DELETE STEPS IN SFC
         if (!manager) {
@@ -252,13 +253,11 @@ export class SfcStep {
   }
 }
 
-
 export abstract class BaseAction {
   public codeUid: string;
   public caption: string;
   public targetBoolean: string;
   public abstract qualifier: string;
-  
 
   constructor(codeUid: string, caption: string, targetBoolean: string) {
     this.codeUid = codeUid;
@@ -266,10 +265,7 @@ export abstract class BaseAction {
     this.targetBoolean = targetBoolean;
   }
 
-  public Render(container: HTMLElement, step?: SfcStep): void {
-
-     var sfc = SfcManager.getInstance();
-
+  public Render(container: HTMLElement, step?: SfcStep, manager?: any): void {
     const actionRow = Html(container, "tr", [], []);
 
     // Dropdown für Action-Typen
@@ -281,6 +277,7 @@ export abstract class BaseAction {
       { label: "L", classRef: ActionL },
       { label: "D", classRef: ActionD },
       { label: "P", classRef: ActionP },
+      
       { label: "SD", classRef: ActionSD }
     ];
 
@@ -299,16 +296,14 @@ export abstract class BaseAction {
     const tdTarget = Html(actionRow, "td", [], []);
     const selectTarget = Html(tdTarget, "select", [], ["target-boolean-select"]) as HTMLSelectElement;
 
-    // Hole Boolean-Namen aus Step/SfcData
+    // Hole Boolean-Namen aus Step/SfcData --> das kann ja gar nicht funktionieren bullshit.
     let booleanKeys: string[] = [];
-    
-    // Try to get boolean keys from the SfcManager
-    if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
-        booleanKeys = Object.keys((window as any).sfcManager.sfcData.booleans.getAll());
-    } else if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
+    if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
         booleanKeys = Object.keys((step as any).parentSfcData.booleans.getAll());
+    } else if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
+        booleanKeys = Object.keys((window as any).sfcManager.sfcData.booleans.getAll());
     }
-    
+    //________________________________
     // Fallback: Standardwerte
     if (booleanKeys.length === 0) {
         booleanKeys = ["redLed", "yellowLed", "greenLed", "merk1", "merk2", "merk3", "merk4"];
@@ -321,37 +316,34 @@ export abstract class BaseAction {
 
     selectTarget.addEventListener("change", () => {
       this.targetBoolean = selectTarget.value;
-      
-      // Notify SfcManager if available
-      sfc.notifyChange();
-
     });
 
     // Typwechsel-Handler
     select.addEventListener("change", () => {
       if (this.qualifier === select.value) return;
-      console.log(`Changing action type from ${this.qualifier} to ${select.value}`);
       if (step) {
         const idx = step.actions.indexOf(this);
         if (idx >= 0) {
           // Aktuelle Werte übernehmen
           const newCaption = input.value;
-          console.log(`Changing caption to: ${newCaption}`);
           const newTarget = selectTarget.value;
-          console.log(`Changing targetBoolean to: ${newTarget}`);
-          
           // Neue Action-Instanz mit aktuellem Typ
           const newAction = new (actionTypes.find(t => t.label === select.value)!.classRef)(
             this.codeUid,
             newCaption,
             newTarget
           );
-          
-         
-          sfc.addActionToStep(step.uid, newAction);
-          // Notify SfcManager of the change
-          sfc.notifyChange();
-          
+          step.actions[idx] = newAction;
+          // Tabelle neu rendern
+          const tableBody = container.closest("tbody");
+          if (tableBody) {
+            tableBody.innerHTML = "";
+            step.actions.forEach(a => a.Render(tableBody as HTMLElement, step));
+          }
+             // Notify manager/UI about the change
+          if (manager && typeof manager.notifyChange === "function") {
+            manager.notifyChange();
+          }
         }
       }
     });
@@ -359,14 +351,34 @@ export abstract class BaseAction {
     // Caption-Handler
     input.addEventListener("change", () => {
       this.caption = input.value;
-      
-      // Notify SfcManager if available
-       sfc.notifyChange();
     });
-  }
-  
 
+    // Delete-Button in eigene Spalte
+    const tdDelete = Html(actionRow, "td", [], []);
+    const deleteBtn = Html(tdDelete, "button", [], ["action-delete-btn"], "✕");
+    deleteBtn.title = "Diese Aktion löschen";
+
+    deleteBtn.onclick = () => {
+      // Sicherheitsabfrage vor dem Löschen
+      if (!window.confirm("Sind Sie sicher, dass Sie diese Aktion löschen möchten?")) return;
+      if (!step) return;
+      const idx = step.actions.indexOf(this);
+      if (idx >= 0) {
+        step.actions.splice(idx, 1);
+        // Tabelle neu rendern
+        const tableBody = container.closest("tbody");
+        if (tableBody) {
+          tableBody.innerHTML = "";
+          step.actions.forEach(a => a.Render(tableBody as HTMLElement, step, manager));
+        }
+        // Optional: UI neu rendern
+        if (manager && typeof manager.notifyChange === "function") {
+          manager.notifyChange();
+        }
+      }
+    };
 }
+  }
 
 
 
