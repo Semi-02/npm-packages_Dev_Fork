@@ -1,4 +1,5 @@
 import { Html } from "../utils/common";
+import { OkCancelDialog } from "../dialog_controller"; // Import hinzufügen
 
 export class SfcData {
   public start: SfcStep;
@@ -177,27 +178,38 @@ export class SfcStep {
 
       const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
       this.addHoverButtonToStepActions(actionsArea);
-      this.renderActionsTable(actionsArea);
+      this.renderActionsTable(actionsArea,manager);
     }
   }
 
   private renderLowerPart(container: HTMLElement): void {
     const lowerPart = Html(container, "div", [], ["step-lower-part"]);
 
+    // Zwei Spalten nebeneinander
+    const columns = Html(lowerPart, "div", [], ["step-lower-columns"]);
+    
+    // Linke Spalte: Vertikale Linie
+    const lineCol = Html(columns, "div", [], ["step-lower-line-col"]);
+    Html(lineCol, "div", [], ["step-lower-vertical-line"]);
+
+    // Rechte Spalte: Transition-Bedingungen
+    const transCol = Html(columns, "div", [], ["step-lower-trans-col"]);
     if (this.outgoingTransitions.length > 0) {
       this.outgoingTransitions.forEach(transition => {
-        transition.Render(lowerPart);
+        // Zeige alle Bedingungen an (ggf. anpassen)
+        const cond = transition.condition.join(" && ");
+        Html(transCol, "div", [], ["transition-condition"], cond);
       });
     }
   }
 
-  private renderActionsTable(container: HTMLElement): void {
+  private renderActionsTable(container: HTMLElement, manager?:any): void {
     const table = Html(container, "table", [], ["actions-table"]);
     const tbody = Html(table, "tbody", [], []);
 
     if (this.actions.length > 0) {
       this.actions.forEach(action => {
-        action.Render(tbody, this);
+        action.Render(tbody, this, manager);
       });
     }
   }
@@ -261,15 +273,27 @@ export class SfcStep {
     const btnTopLeft = Html(stepNameDiv, "button", [], ["step-name-btn", "top-left"], "✕");
     btnTopLeft.onclick = () => {
       // Sicherheitsabfrage vor dem Löschen
-      if (!window.confirm("Sind Sie sicher, dass Sie diesen Step löschen möchten?")) return;
-      console.log("Step", this.uid, "löschen");
-      //ERGÄNZUNG FÜR DELETE STEPS IN SFC
-        if (!manager) {
-          console.error("Manager is not defined");
-          return;
-        }	
-        manager.deleteStep(this.uid);
-        manager.sfcUI.RenderUI();
+      if (!manager) {
+        console.error("Manager is not defined");
+        return;
+      }
+      // OkCancelDialog statt window.confirm
+      const dialog = new OkCancelDialog(
+        2, // Severity.WARN (2)
+        "Sind Sie sicher, dass Sie diesen Step löschen möchten?",
+        (ok) => {
+          if (ok) {
+            console.log("Step", this.uid, "löschen");
+            manager.deleteStep(this.uid);
+            manager.sfcUI.RenderUI();
+          }
+        }
+      );
+      if (manager.appManagement && typeof manager.appManagement.ShowDialog === "function") {
+        manager.appManagement.ShowDialog(dialog);
+      } else if (window && (window as any).appController && typeof (window as any).appController.ShowDialog === "function") {
+        (window as any).appController.ShowDialog(dialog);
+      }
     };
   }
 }
@@ -380,22 +404,33 @@ export abstract class BaseAction {
     deleteBtn.title = "Diese Aktion löschen";
 
     deleteBtn.onclick = () => {
-      // Sicherheitsabfrage vor dem Löschen
-      if (!window.confirm("Sind Sie sicher, dass Sie diese Aktion löschen möchten?")) return;
       if (!step) return;
-      const idx = step.actions.indexOf(this);
-      if (idx >= 0) {
-        step.actions.splice(idx, 1);
-        // Tabelle neu rendern
-        const tableBody = container.closest("tbody");
-        if (tableBody) {
+      const dialog = new OkCancelDialog(
+      2, // Severity.WARN (2)
+      "Sind Sie sicher, dass Sie diese Aktion löschen möchten?",
+      (ok) => {
+        if (ok) {
+        const idx = step.actions.indexOf(this);
+        if (idx >= 0) {
+          step.actions.splice(idx, 1);
+          // Tabelle neu rendern
+          const tableBody = container.closest("tbody");
+          if (tableBody) {
           tableBody.innerHTML = "";
           step.actions.forEach(a => a.Render(tableBody as HTMLElement, step, manager));
-        }
-        // Optional: UI neu rendern
-        if (manager && typeof manager.notifyChange === "function") {
+          }
+          // Optional: UI neu rendern
+          if (manager && typeof manager.notifyChange === "function") {
           manager.notifyChange();
+          }
         }
+        }
+      }
+      );
+      if (manager && manager.appManagement && typeof manager.appManagement.ShowDialog === "function") {
+      manager.appManagement.ShowDialog(dialog);
+      } else if (window && (window as any).appController && typeof (window as any).appController.ShowDialog === "function") {
+      (window as any).appController.ShowDialog(dialog);
       }
     };
 }
