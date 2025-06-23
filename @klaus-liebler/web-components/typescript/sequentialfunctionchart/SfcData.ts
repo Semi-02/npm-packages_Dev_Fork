@@ -177,7 +177,7 @@ export class SfcStep {
       Html(bridgeArea, "div", [], ["bridge-line"]);
 
       const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
-      this.addHoverButtonToStepActions(actionsArea);
+      this.addHoverButtonToStepActions(actionsArea,manager);
       this.renderActionsTable(actionsArea,manager);
     }
   }
@@ -214,7 +214,7 @@ export class SfcStep {
     }
   }
 
-  private addHoverButtonToStepActions(stepActionsContainer: HTMLElement): void {
+  private addHoverButtonToStepActions(stepActionsContainer: HTMLElement,manager?:any ): void {
     const hoverButton = Html(stepActionsContainer, "button", [], ["hover-button"], "➕");
     hoverButton.style.display = "none";
 
@@ -222,9 +222,15 @@ export class SfcStep {
       const newAction = new ActionN(`A-${Date.now()}`, "New Action", "newBoolean");
       this.actions.push(newAction);
 
+      // Statt nur die neue Action zu rendern, die ganze Tabelle neu rendern:
       const tableBody = stepActionsContainer.querySelector('.actions-table tbody');
       if (tableBody) {
-        newAction.Render(tableBody as HTMLElement, this);
+        tableBody.innerHTML = "";
+        this.actions.forEach(a => a.Render(tableBody as HTMLElement, this, manager));
+      }
+      // Optional: Manager/UI benachrichtigen
+      if (manager && typeof manager.notifyChange === "function") {
+        manager.notifyChange();
       }
     });
 
