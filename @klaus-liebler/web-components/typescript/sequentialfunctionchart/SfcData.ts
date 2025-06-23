@@ -340,6 +340,41 @@ export abstract class BaseAction {
   public Render(container: HTMLElement, step?: SfcStep, manager?: any): void {
     const actionRow = Html(container, "tr", [], []);
 
+    // NEU: Spalte für "Action einfügen"-Button (grün)
+    const tdInsert = Html(actionRow, "td", [], []);
+    const insertBtn = Html(tdInsert, "button", [], ["action-insert-btn"], "+");
+    insertBtn.title = "Neue Aktion unterhalb einfügen";
+    insertBtn.style.background = "#27ae60";
+    insertBtn.style.color = "#fff";
+    insertBtn.style.border = "none";
+    insertBtn.style.borderRadius = "50%";
+    insertBtn.style.width = "20px";
+    insertBtn.style.height = "20px";
+    insertBtn.style.cursor = "pointer";
+    insertBtn.style.marginRight = "4px";
+    insertBtn.style.opacity = "0.8";
+    insertBtn.style.fontWeight = "bold";
+    insertBtn.onmouseenter = () => insertBtn.style.opacity = "1";
+    insertBtn.onmouseleave = () => insertBtn.style.opacity = "0.8";
+
+    insertBtn.onclick = () => {
+      if (!step) return;
+      const idx = step.actions.indexOf(this);
+      if (idx >= 0) {
+        const newAction = new ActionN(`A-${Date.now()}`, "New Action", "newBoolean");
+        step.actions.splice(idx + 1, 0, newAction);
+        // Tabelle neu rendern
+        const tableBody = container.closest("tbody");
+        if (tableBody) {
+          tableBody.innerHTML = "";
+          step.actions.forEach(a => a.Render(tableBody as HTMLElement, step, manager));
+        }
+        if (manager && typeof manager.notifyChange === "function") {
+          manager.notifyChange();
+        }
+      }
+    };
+
     // Dropdown für Action-Typen
     const tdType = Html(actionRow, "td", [], []);
     const select = Html(tdType, "select", [], ["action-type-select"]) as HTMLSelectElement;
