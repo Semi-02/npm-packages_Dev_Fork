@@ -184,21 +184,42 @@ export class SfcStep {
 
   private renderLowerPart(container: HTMLElement): void {
     const lowerPart = Html(container, "div", [], ["step-lower-part"]);
-
-    // Zwei Spalten nebeneinander
     const columns = Html(lowerPart, "div", [], ["step-lower-columns"]);
-    
-    // Linke Spalte: Vertikale Linie
     const lineCol = Html(columns, "div", [], ["step-lower-line-col"]);
     Html(lineCol, "div", [], ["step-lower-vertical-line"]);
-
-    // Rechte Spalte: Transition-Bedingungen
     const transCol = Html(columns, "div", [], ["step-lower-trans-col"]);
     if (this.outgoingTransitions.length > 0) {
-      this.outgoingTransitions.forEach(transition => {
-        // Zeige alle Bedingungen an (ggf. anpassen)
-        const cond = transition.condition.join(" && ");
-        Html(transCol, "div", [], ["transition-condition"], cond);
+      this.outgoingTransitions.forEach((transition, idx) => {
+        const condDiv = Html(transCol, "div", [], ["transition-condition"]) as HTMLDivElement;
+        condDiv.contentEditable = "true";
+        condDiv.innerText = transition.condition.join(" && ");
+        condDiv.title = "Erlaubte Struktur: Variablen, !, &&, ||, (, ) (z.B. a && (b || !c))";
+
+        // Regex für gültige SFC-Bedingungen
+        const sfcConditionRegex = /^[a-zA-Z_][a-zA-Z0-9_]*\s*(==|!=|<=|>=|<|>)\s*(true|false|[a-zA-Z_][a-zA-Z0-9_]*|\d+)(\s*(&&|\|\|)\s*[a-zA-Z_][a-zA-Z0-9_]*\s*(==|!=|<=|>=|<|>)\s*(true|false|[a-zA-Z_][a-zA-Z0-9_]*|\d+))*\s*$/;
+
+        // Validierung und Speichern
+        const saveCondition = () => {
+          const value = condDiv.innerText.trim();
+          if (!sfcConditionRegex.test(value)) {
+            condDiv.style.background = "#ffe0e0";
+            condDiv.title = "Erlaubt: <Variable> <Vergleich> <Wert> [&&/|| ...] (z.B. redTimer == true)";
+            return;
+          } else {
+            condDiv.style.background = "";
+            condDiv.title = "Erlaubte Struktur: <Variable> <Vergleich> <Wert> [&&/|| ...]";
+          }
+          const newConds = value.split("&&").map(s => s.trim()).filter(Boolean);
+          transition.condition = newConds;
+        };
+
+        condDiv.addEventListener("blur", saveCondition);
+        condDiv.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            condDiv.blur();
+          }
+        });
       });
     }
   }
