@@ -56,44 +56,49 @@ export class SfcData {
   }
 }
 export class SfcBooleans {
-  private booleanValues: Map<string, boolean> = new Map<string, boolean>();
+  private hardwareBooleans: Map<string, boolean> = new Map<string, boolean>();
+  private customBooleans: Map<string, boolean> = new Map<string, boolean>();
 
   constructor() {
-    // Initialisiere mit Standardwerten
-    this.booleanValues.set("redLed", false);
-    this.booleanValues.set("yellowLed", false);
-    this.booleanValues.set("greenLed", false);
+    // Hardware-Booleans
+    this.hardwareBooleans.set("Red_LED", false);
+    this.hardwareBooleans.set("Yellow_LED", false);
+    this.hardwareBooleans.set("Green_LED", false);
 
-    this.booleanValues.set("merk1", false);
-    this.booleanValues.set("merk2", false);
-    this.booleanValues.set("merk3", false);
-    this.booleanValues.set("merk4", false);
+    // Custom-Booleans
+    this.customBooleans.set("merk1", false);
+    this.customBooleans.set("merk2", false);
+    this.customBooleans.set("merk3", false);
+    this.customBooleans.set("merk4", false);
   }
 
-  // Getter und Setter für Map-Zugriff
+  // Getter und Setter
   public get(key: string): boolean {
-    return this.booleanValues.get(key) || false;
+    if (this.hardwareBooleans.has(key)) return this.hardwareBooleans.get(key) || false;
+    if (this.customBooleans.has(key)) return this.customBooleans.get(key) || false;
+    return false;
   }
 
   public set(key: string, value: boolean): void {
-    this.booleanValues.set(key, value);
+    if (this.hardwareBooleans.has(key)) this.hardwareBooleans.set(key, value);
+    else if (this.customBooleans.has(key)) this.customBooleans.set(key, value);
   }
 
   // Für Kompatibilität mit vorhandenem Code
-  public getAll(): Record<string, boolean> {
-    const result: Record<string, boolean> = {};
-    this.booleanValues.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
+  public getAll(): { hardware: Record<string, boolean>, custom: Record<string, boolean> } {
+    const hardware: Record<string, boolean> = {};
+    const custom: Record<string, boolean> = {};
+    this.hardwareBooleans.forEach((value, key) => { hardware[key] = value; });
+    this.customBooleans.forEach((value, key) => { custom[key] = value; });
+    return { hardware, custom };
   }
 
   public Render(container: HTMLElement): void {
     const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"]);
-    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Boolean Values");
 
-    // Iteriere über die Map-Einträge
-    this.booleanValues.forEach((value, name) => {
+    // Hardware-Bereich
+    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Hardware Booleans");
+    this.hardwareBooleans.forEach((value, name) => {
       const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
       Html(boolRow, "span", [], ["bool-name"], name);
 
@@ -103,16 +108,35 @@ export class SfcBooleans {
       const optionTrue = Html(select, "option", ["value", "true"], [], "true") as HTMLOptionElement;
       const optionFalse = Html(select, "option", ["value", "false"], [], "false") as HTMLOptionElement;
 
-      if (value === true) {
-        optionTrue.selected = true;
-      } else {
-        optionFalse.selected = true;
-      }
+      if (value === true) optionTrue.selected = true;
+      else optionFalse.selected = true;
 
       select.addEventListener("change", () => {
         const newValue = select.value === "true";
         this.set(name, newValue);
-        console.log(`Changed boolean ${name} to ${newValue}`);
+        console.log(`Changed hardware boolean ${name} to ${newValue}`);
+      });
+    });
+
+    // Custom-Bereich
+    Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Custom Booleans");
+    this.customBooleans.forEach((value, name) => {
+      const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
+      Html(boolRow, "span", [], ["bool-name"], name);
+
+      const selectContainer = Html(boolRow, "div", [], ["bool-value-container"]);
+      const select = Html(selectContainer, "select", [], ["bool-value-select"]) as HTMLSelectElement;
+
+      const optionTrue = Html(select, "option", ["value", "true"], [], "true") as HTMLOptionElement;
+      const optionFalse = Html(select, "option", ["value", "false"], [], "false") as HTMLOptionElement;
+
+      if (value === true) optionTrue.selected = true;
+      else optionFalse.selected = true;
+
+      select.addEventListener("change", () => {
+        const newValue = select.value === "true";
+        this.set(name, newValue);
+        console.log(`Changed custom boolean ${name} to ${newValue}`);
       });
     });
   }
@@ -226,6 +250,17 @@ export class SfcStep {
 
   private renderActionsTable(container: HTMLElement, manager?:any): void {
     const table = Html(container, "table", [], ["actions-table"]);
+    
+    // Legenden-Zeile einfügen
+    const thead = Html(table, "thead", [], []);
+    const legendRow = Html(thead, "tr", [], []);
+    Html(legendRow, "th", [], [], "Einfügen");
+    Html(legendRow, "th", [], [], "Typ");
+    Html(legendRow, "th", [], [], "Name");
+    Html(legendRow, "th", [], [], "Dauer (ms)");
+    Html(legendRow, "th", [], [], "Ziel-Boolean");
+    Html(legendRow, "th", [], [], "Löschen");
+
     const tbody = Html(table, "tbody", [], []);
 
     if (this.actions.length > 0) {
@@ -329,12 +364,14 @@ export abstract class BaseAction {
   public codeUid: string;
   public caption: string;
   public targetBoolean: string;
+  public durationMs: number; // <--- NEU
   public abstract qualifier: string;
 
-  constructor(codeUid: string, caption: string, targetBoolean: string) {
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
     this.codeUid = codeUid;
     this.caption = caption;
     this.targetBoolean = targetBoolean;
+    this.durationMs = durationMs; // <--- NEU
   }
 
   public Render(container: HTMLElement, step?: SfcStep, manager?: any): void {
@@ -398,6 +435,17 @@ export abstract class BaseAction {
     const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
     input.value = this.caption;
     input.style.width = "95%";
+
+    // NEU: Feld für Zeitdauer (ms)
+    const tdDuration = Html(actionRow, "td", [], []);
+    const inputDuration = Html(tdDuration, "input", ["type", "number"], [], undefined) as HTMLInputElement;
+    inputDuration.value = this.durationMs.toString();
+    inputDuration.min = "0";
+    inputDuration.placeholder = "ms";
+    inputDuration.style.width = "70px";
+    inputDuration.addEventListener("change", () => {
+      this.durationMs = parseInt(inputDuration.value) || 0;
+    });
 
     // Dropdown für targetBoolean
     const tdTarget = Html(actionRow, "td", [], []);
@@ -502,26 +550,39 @@ export abstract class BaseAction {
 
 export class ActionN extends BaseAction {
   public qualifier: string = "N";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
 }
-
 export class ActionS0 extends BaseAction {
   public qualifier: string = "S0";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
 }
-
 export class ActionL extends BaseAction {
   public qualifier: string = "L";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
 }
-
 export class ActionD extends BaseAction {
   public qualifier: string = "D";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
 }
-
 export class ActionP extends BaseAction {
   public qualifier: string = "P";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
 }
-
 export class ActionSD extends BaseAction {
   public qualifier: string = "SD";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
 }
 
 export abstract class BaseTransition {
