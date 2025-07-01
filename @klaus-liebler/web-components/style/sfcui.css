@@ -217,14 +217,15 @@
 }
 
 .step-actions {
+  position: relative;
   width: 60%;
   border: 2px solid #333;
   border-radius: 4px;
   padding: 0;
   overflow-y: auto;
+  height: 150px;         /* neu: immer gleich hoch */
   max-height: 150px;
   box-sizing: border-box;
-  position: relative;
 }
 
 .actions-table {
