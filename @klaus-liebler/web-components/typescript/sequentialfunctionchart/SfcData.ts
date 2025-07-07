@@ -444,6 +444,14 @@ export abstract class BaseAction {
       this.durationMs = parseInt(inputDuration.value) || 0;
     });
 
+    // Sichtbarkeit je nach Qualifier:
+    const timeQualifiers = ["L", "D", "SD", "DS", "SL"];
+    if (!timeQualifiers.includes(this.qualifier)) {
+      inputDuration.disabled = true;
+    } else {
+      inputDuration.disabled=false;
+    }
+
     // Name-Feld (jetzt nach Dauer)
     const tdCaption = Html(actionRow, "td", [], []);
     const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
@@ -492,6 +500,16 @@ export abstract class BaseAction {
             newTarget
           );
           step.actions[idx] = newAction;
+
+
+            // Umschalten der Sichtbarkeit von Dauer (ms)
+      const timeQualifiers = ["L", "D", "SD", "DS", "SL"];
+      if (!timeQualifiers.includes(select.value)) {
+        inputDuration.disabled= true;
+      } else {
+        inputDuration.disabled=false;
+      }
+
           // Tabelle neu rendern
           const tableBody = container.closest("tbody");
           if (tableBody) {
