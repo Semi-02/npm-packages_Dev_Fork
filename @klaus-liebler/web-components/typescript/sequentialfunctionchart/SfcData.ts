@@ -462,6 +462,13 @@ export abstract class BaseAction {
     const tdTarget = Html(actionRow, "td", [], []);
     const selectTarget = Html(tdTarget, "select", [], ["target-boolean-select"]) as HTMLSelectElement;
 
+
+    //TODO: Eine methode um die booleans auszulesen:
+
+
+
+
+
     // Hole Boolean-Namen aus Step/SfcData --> das kann ja gar nicht funktionieren bullshit.
     let booleanKeys: string[] = [];
     if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
@@ -469,10 +476,11 @@ export abstract class BaseAction {
     } else if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
         booleanKeys = Object.keys((window as any).sfcManager.sfcData.booleans.getAll());
     }
-    //________________________________
+
+    //________________________________ fällt immer in den Fallback
     // Fallback: Standardwerte
     if (booleanKeys.length === 0) {
-        booleanKeys = ["redLed", "yellowLed", "greenLed", "merk1", "merk2", "merk3", "merk4"];
+        booleanKeys = ["Red_LED", "Yellow_LED", "Green_LED", "Timer1Flag", "Timer2Flag", "merk3", "merk4"];
     }
 
     booleanKeys.forEach(key => {
