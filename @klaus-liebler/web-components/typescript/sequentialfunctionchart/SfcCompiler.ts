@@ -1,4 +1,20 @@
-import { ActionD, ActionL, ActionN, ActionP, ActionS0, ActionSD, BaseAction, BaseTransition, SfcBooleans, SfcData, SfcStep, SimpleTransition } from "./SfcData";
+import {
+  ActionN,
+  ActionR,
+  ActionS,
+  ActionL,
+  ActionD,
+  ActionP,
+  ActionSD,
+  ActionDS,
+  ActionSL,
+  BaseAction,
+  BaseTransition,
+  SfcBooleans,
+  SfcData,
+  SfcStep,
+  SimpleTransition
+} from "./SfcData";
 
 export class SfcCompiler {
   constructor() { }
@@ -35,11 +51,14 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
             let action: BaseAction;
             switch (actionDto.qualifier) {
               case "N": action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "S0": action = new ActionS0(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "S": action = new ActionS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
               case "L": action = new ActionL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
               case "D": action = new ActionD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
               case "P": action = new ActionP(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
               case "SD": action = new ActionSD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "R": action = new ActionR(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "DS": action = new ActionDS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "SL": action = new ActionSL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
               default: action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
             }
             step.actions.push(action);
@@ -110,6 +129,7 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
     return JSON.parse(jsonPart);
   }
 
+  
 
 
   private convertSfcDataToDto(sfcData: SfcData): string {
@@ -145,9 +165,18 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
 
     // Create boolean data
     const booleans = new SfcBooleans();
-    Object.entries(dto.booleans).forEach(([key, value]) => {
-      booleans.set(key, value);
-    });
+    if (dto.booleans) {
+      if (dto.booleans.hardware) {
+        Object.entries(dto.booleans.hardware).forEach(([key, value]) => {
+          booleans.set(key, value as boolean);
+        });
+      }
+      if (dto.booleans.custom) {
+        Object.entries(dto.booleans.custom).forEach(([key, value]) => {
+          booleans.set(key, value as boolean);
+        });
+      }
+    }
 
     // Create step objects (without transitions first)
     const stepsMap = new Map<string, SfcStep>();
@@ -159,11 +188,14 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
         let action: BaseAction;
         switch (actionDto.qualifier) {
           case "N": action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-          case "S0": action = new ActionS0(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+          case "S": action = new ActionS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
           case "L": action = new ActionL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
           case "D": action = new ActionD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
           case "P": action = new ActionP(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
           case "SD": action = new ActionSD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+          case "R": action = new ActionR(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+          case "DS": action = new ActionDS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+          case "SL": action = new ActionSL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
           default: action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
         }
         step.actions.push(action);
@@ -217,8 +249,13 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
 export interface SfcDataDto {
   start: string; // UID of the start step
   steps: SfcStepDto[];
-  booleans: Record<string, boolean>;
+  booleans:
+  {
+    hardware: Record<string, boolean>; 
+    custom:  Record<string, boolean>;
+  }; 
 }
+
 
 export interface SfcStepDto {
   uid: string;

@@ -251,13 +251,13 @@ export class SfcStep {
   private renderActionsTable(container: HTMLElement, manager?:any): void {
     const table = Html(container, "table", [], ["actions-table"]);
     
-    // Legenden-Zeile einfügen
+    // Legenden-Zeile einfügen (Dauer jetzt hinter Typ, Name danach)
     const thead = Html(table, "thead", [], []);
     const legendRow = Html(thead, "tr", [], []);
     Html(legendRow, "th", [], [], "Einfügen");
     Html(legendRow, "th", [], [], "Typ");
-    Html(legendRow, "th", [], [], "Name");
     Html(legendRow, "th", [], [], "Dauer (ms)");
+    Html(legendRow, "th", [], [], "Name");
     Html(legendRow, "th", [], [], "Ziel-Boolean");
     Html(legendRow, "th", [], [], "Löschen");
 
@@ -377,7 +377,7 @@ export abstract class BaseAction {
   public Render(container: HTMLElement, step?: SfcStep, manager?: any): void {
     const actionRow = Html(container, "tr", [], []);
 
-    // NEU: Spalte für "Action einfügen"-Button (grün)
+    // Einfügen-Button
     const tdInsert = Html(actionRow, "td", [], []);
     const insertBtn = Html(tdInsert, "button", [], ["action-insert-btn"], "+");
     insertBtn.title = "Neue Aktion unterhalb einfügen";
@@ -415,14 +415,17 @@ export abstract class BaseAction {
     // Dropdown für Action-Typen
     const tdType = Html(actionRow, "td", [], []);
     const select = Html(tdType, "select", [], ["action-type-select"]) as HTMLSelectElement;
+    // Qualifier-Auswahl nach CODESYS-Standard
     const actionTypes = [
-      { label: "N", classRef: ActionN },
-      { label: "S0", classRef: ActionS0 },
-      { label: "L", classRef: ActionL },
-      { label: "D", classRef: ActionD },
-      { label: "P", classRef: ActionP },
-      
-      { label: "SD", classRef: ActionSD }
+      { label: "N", classRef: ActionN },   // Non-stored
+      { label: "R", classRef: ActionR },   // overriding Reset
+      { label: "S", classRef: ActionS },   // Set (Stored)
+      { label: "L", classRef: ActionL },   // time Limited
+      { label: "D", classRef: ActionD },   // time Delayed
+      { label: "P", classRef: ActionP },   // Pulse
+      { label: "SD", classRef: ActionSD }, // Stored and time Delayed
+      { label: "DS", classRef: ActionDS }, // Delayed and Stored
+      { label: "SL", classRef: ActionSL }, // Stored and time limited
     ];
 
     actionTypes.forEach(type => {
@@ -430,13 +433,7 @@ export abstract class BaseAction {
       if (this.qualifier === type.label) option.selected = true;
     });
 
-    // Editierbares Feld für Caption (Name)
-    const tdCaption = Html(actionRow, "td", [], []);
-    const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
-    input.value = this.caption;
-    input.style.width = "95%";
-
-    // NEU: Feld für Zeitdauer (ms)
+    // Dauer (ms) Feld (jetzt direkt nach Typ)
     const tdDuration = Html(actionRow, "td", [], []);
     const inputDuration = Html(tdDuration, "input", ["type", "number"], [], undefined) as HTMLInputElement;
     inputDuration.value = this.durationMs.toString();
@@ -447,7 +444,13 @@ export abstract class BaseAction {
       this.durationMs = parseInt(inputDuration.value) || 0;
     });
 
-    // Dropdown für targetBoolean
+    // Name-Feld (jetzt nach Dauer)
+    const tdCaption = Html(actionRow, "td", [], []);
+    const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
+    input.value = this.caption;
+    input.style.width = "95%";
+
+    // Ziel-Boolean Dropdown
     const tdTarget = Html(actionRow, "td", [], []);
     const selectTarget = Html(tdTarget, "select", [], ["target-boolean-select"]) as HTMLSelectElement;
 
@@ -508,7 +511,7 @@ export abstract class BaseAction {
       this.caption = input.value;
     });
 
-    // Delete-Button in eigene Spalte
+    // Löschen-Button
     const tdDelete = Html(actionRow, "td", [], []);
     const deleteBtn = Html(tdDelete, "button", [], ["action-delete-btn"], "✕");
     deleteBtn.title = "Diese Aktion löschen";
@@ -554,8 +557,14 @@ export class ActionN extends BaseAction {
     super(codeUid, caption, targetBoolean, durationMs);
   }
 }
-export class ActionS0 extends BaseAction {
-  public qualifier: string = "S0";
+export class ActionR extends BaseAction {
+  public qualifier: string = "R";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
+}
+export class ActionS extends BaseAction {
+  public qualifier: string = "S";
   constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
     super(codeUid, caption, targetBoolean, durationMs);
   }
@@ -580,6 +589,18 @@ export class ActionP extends BaseAction {
 }
 export class ActionSD extends BaseAction {
   public qualifier: string = "SD";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
+}
+export class ActionDS extends BaseAction {
+  public qualifier: string = "DS";
+  constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
+    super(codeUid, caption, targetBoolean, durationMs);
+  }
+}
+export class ActionSL extends BaseAction {
+  public qualifier: string = "SL";
   constructor(codeUid: string, caption: string, targetBoolean: string, durationMs: number = 0) {
     super(codeUid, caption, targetBoolean, durationMs);
   }

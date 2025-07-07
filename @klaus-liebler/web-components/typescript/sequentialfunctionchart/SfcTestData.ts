@@ -3,11 +3,14 @@ import {
   SfcStep, 
   SimpleTransition, 
   ActionN, 
-  ActionS0, 
+  ActionR,
+  ActionS,
   ActionL, 
   ActionD, 
   ActionP, 
   ActionSD,
+  ActionDS,
+  ActionSL,
   SfcBooleans
 } from "./SfcData";
 
@@ -18,7 +21,7 @@ export class SfcTestDataProvider {
     
     // Erstelle Steps mit den spezifizierten Aktionen
     const step1 = new SfcStep("step1", "Initial Step");
-    step1.actions.push(new ActionS0("act1_1", "Set Red LED", "redLed"));
+    step1.actions.push(new ActionS("act1_1", "Set Red LED", "redLed"));
     step1.actions.push(new ActionN("act1_2", "Reset Yellow LED", "yellowLed"));
     
     const step2 = new SfcStep("step2", "Process Step");
@@ -29,7 +32,7 @@ export class SfcTestDataProvider {
     step2.actions.push(new ActionN("act2_5", "Reset Merk2", "merk2"));
     
     const step3 = new SfcStep("step3", "Verification Step");
-    step3.actions.push(new ActionS0("act3_1", "Set Green LED", "greenLed"));
+    step3.actions.push(new ActionS("act3_1", "Set Green LED", "greenLed"));
     step3.actions.push(new ActionN("act3_2", "Reset Red LED", "redLed"));
     step3.actions.push(new ActionL("act3_3", "Latch Yellow LED", "yellowLed"));
     step3.actions.push(new ActionD("act3_4", "Delayed Merk2", "merk2"));
@@ -37,7 +40,7 @@ export class SfcTestDataProvider {
     step3.actions.push(new ActionSD("act3_6", "Store Merk4", "merk4"));
     
     const step4 = new SfcStep("step4", "Output Step");
-    step4.actions.push(new ActionS0("act4_1", "Set Yellow LED", "yellowLed"));
+    step4.actions.push(new ActionS("act4_1", "Set Yellow LED", "yellowLed"));
     step4.actions.push(new ActionN("act4_2", "Reset Green LED", "greenLed"));
     step4.actions.push(new ActionL("act4_3", "Latch Merk4", "merk4"));
     
@@ -89,26 +92,26 @@ export class SfcTestDataProvider {
     
     // Ampelzustände
     const redStep = new SfcStep("step1", "Rot Phase");
-    redStep.actions.push(new ActionS0("act1_1", "Rot einschalten", "redLight"));
+    redStep.actions.push(new ActionS("act1_1", "Rot einschalten", "redLight"));
     redStep.actions.push(new ActionN("act1_2", "Gelb ausschalten", "yellowLight"));
     redStep.actions.push(new ActionN("act1_3", "Grün ausschalten", "greenLight"));
     redStep.actions.push(new ActionSD("act1_4", "Timer starten", "redTimer"));
     
     const redYellowStep = new SfcStep("step2", "Rot-Gelb Phase");
-    redYellowStep.actions.push(new ActionS0("act2_1", "Rot einschalten", "redLight"));
-    redYellowStep.actions.push(new ActionS0("act2_2", "Gelb einschalten", "yellowLight"));
+    redYellowStep.actions.push(new ActionS("act2_1", "Rot einschalten", "redLight"));
+    redYellowStep.actions.push(new ActionS("act2_2", "Gelb einschalten", "yellowLight"));
     redYellowStep.actions.push(new ActionN("act2_3", "Grün ausschalten", "greenLight"));
     redYellowStep.actions.push(new ActionSD("act2_4", "Timer starten", "redYellowTimer"));
     
     const greenStep = new SfcStep("step3", "Grün Phase");
     greenStep.actions.push(new ActionN("act3_1", "Rot ausschalten", "redLight"));
     greenStep.actions.push(new ActionN("act3_2", "Gelb ausschalten", "yellowLight"));
-    greenStep.actions.push(new ActionS0("act3_3", "Grün einschalten", "greenLight"));
+    greenStep.actions.push(new ActionS("act3_3", "Grün einschalten", "greenLight"));
     greenStep.actions.push(new ActionSD("act3_4", "Timer starten", "greenTimer"));
     
     const yellowStep = new SfcStep("step4", "Gelb Phase");
     yellowStep.actions.push(new ActionN("act4_1", "Rot ausschalten", "redLight"));
-    yellowStep.actions.push(new ActionS0("act4_2", "Gelb einschalten", "yellowLight"));
+    yellowStep.actions.push(new ActionS("act4_2", "Gelb einschalten", "yellowLight"));
     yellowStep.actions.push(new ActionN("act4_3", "Grün ausschalten", "greenLight"));
     yellowStep.actions.push(new ActionSD("act4_4", "Timer starten", "yellowTimer"));
     
