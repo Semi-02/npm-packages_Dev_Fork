@@ -1,5 +1,7 @@
 import { Html } from "../utils/common";
 import { OkCancelDialog } from "../dialog_controller"; // Import hinzufügen
+import { SfcUI } from "./SfcUI";
+import { SfcManager } from "./SfcManager";
 
 export class SfcData {
   public start: SfcStep;
@@ -9,7 +11,10 @@ export class SfcData {
   constructor(start?: SfcStep, booleans?: SfcBooleans) {
     this.start = start || null;
     this.booleans = booleans || new SfcBooleans();
-    if (start) this.steps.push(start);
+    if (start) {
+      start.parentSfcData = this;
+      this.steps.push(start);
+    }
   }
 
   public Render(container: HTMLElement, manager?:any): void {
@@ -54,30 +59,41 @@ export class SfcData {
       this.buildStepsRecursively(container, nextLevelSteps, level + 1, visitedSteps,manager);
     }
   }
+
+  // Hilfsfunktion, um Steps nachträglich die Referenz zu setzen (z.B. nach Deserialisierung)
+  public assignParentToAllSteps() {
+    this.steps.forEach(step => step.parentSfcData = this);
+  }
 }
 export class SfcBooleans {
   private hardwareBooleans: Map<string, boolean> = new Map<string, boolean>();
   private customBooleans: Map<string, boolean> = new Map<string, boolean>();
 
-  constructor() {
-    // Hardware-Booleans
-    this.hardwareBooleans.set("Red_LED", false);
-    this.hardwareBooleans.set("Yellow_LED", false);
-    this.hardwareBooleans.set("Green_LED", false);
+  constructor() {  }
 
-    // Custom-Booleans
-    this.customBooleans.set("merk1", false);
-    this.customBooleans.set("merk2", false);
-    this.customBooleans.set("merk3", false);
-    this.customBooleans.set("merk4", false);
+
+  public gethardwareBooleans(): Map<string, boolean> {
+    return this.hardwareBooleans;
   }
 
-  // Getter und Setter
-  public get(key: string): boolean {
-    if (this.hardwareBooleans.has(key)) return this.hardwareBooleans.get(key) || false;
-    if (this.customBooleans.has(key)) return this.customBooleans.get(key) || false;
-    return false;
+  public getCustomBooleans(): Map<string, boolean> {
+    return this.customBooleans;
   }
+
+  public addHardwareBooleans(key:string, value:boolean): void {
+    this.hardwareBooleans.set(key, value);
+  }
+  public addCustomBooleans(key:string, value:boolean): void {
+    this.customBooleans.set(key, value);
+  }
+
+
+  // // Getter und Setter
+  // public get(key: string): boolean {
+  //   if (this.hardwareBooleans.has(key)) return this.hardwareBooleans.get(key) || false;
+  //   if (this.customBooleans.has(key)) return this.customBooleans.get(key) || false;
+  //   return false;
+  // }
 
   public set(key: string, value: boolean): void {
     if (this.hardwareBooleans.has(key)) this.hardwareBooleans.set(key, value);
@@ -93,7 +109,7 @@ export class SfcBooleans {
     return { hardware, custom };
   }
 
-  public Render(container: HTMLElement): void {
+  public Render(container: HTMLElement,manager?:SfcManager): void {
     const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"]);
 
     // Hardware-Bereich
@@ -120,9 +136,39 @@ export class SfcBooleans {
 
     // Custom-Bereich
     Html(booleanFieldsContainer, "h3", [], ["boolean-title"], "Custom Booleans");
+
+    // Add button to create a new custom boolean
+    defineNewCustomBooleanButton(this, booleanFieldsContainer);
+
     this.customBooleans.forEach((value, name) => {
       const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
-      Html(boolRow, "span", [], ["bool-name"], name);
+      // Editable name
+      const nameSpan = Html(boolRow, "span", [], ["bool-name"], name) as HTMLSpanElement;
+      nameSpan.contentEditable = "true";
+      nameSpan.title = "Klicken zum Bearbeiten";
+      nameSpan.addEventListener("blur", () => {
+        const newName = nameSpan.innerText.trim();
+        if (newName && newName !== name && !this.customBooleans.has(newName)) {
+          const currentValue = this.customBooleans.get(name);
+          this.customBooleans.delete(name);
+          this.customBooleans.set(newName, currentValue);
+          // Re-render to update UI
+          manager.sfcUI.RenderUI()
+        } else {
+          nameSpan.innerText = name; // revert if invalid
+        }
+      });
+
+      // Delete button
+      const deleteBtn = Html(boolRow, "button", [], ["bool-delete-btn"], "✕") as HTMLButtonElement;
+      deleteBtn.title = "Delete Boolean";
+      deleteBtn.style.marginLeft = "8px";
+      deleteBtn.onclick = () => {
+        this.customBooleans.delete(name);
+        boolRow.remove();
+         // Re-render to update UI
+        manager.sfcUI.RenderUI()
+      };
 
       const selectContainer = Html(boolRow, "div", [], ["bool-value-container"]);
       const select = Html(selectContainer, "select", [], ["bool-value-select"]) as HTMLSelectElement;
@@ -135,10 +181,34 @@ export class SfcBooleans {
 
       select.addEventListener("change", () => {
         const newValue = select.value === "true";
-        this.set(name, newValue);
-        console.log(`Changed custom boolean ${name} to ${newValue}`);
+        this.set(nameSpan.innerText.trim(), newValue);
+        // No re-render needed for value change
       });
     });
+
+    function defineNewCustomBooleanButton(self: SfcBooleans, container: HTMLElement) {
+      const addBtn = Html(container, "button", [], ["bool-add-btn"], "+ Neuer Custom Boolean") as HTMLButtonElement;
+      addBtn.style.margin = "8px 0";
+      addBtn.onclick = () => {
+        let baseName = "customBool";
+        let idx = 1;
+        let newName = baseName + idx;
+        while (self.customBooleans.has(newName)) {
+          idx++;
+          newName = baseName + idx;
+        }
+        self.customBooleans.set(newName, false);
+         // Re-render to update UI
+          manager.sfcUI.RenderUI()
+      };
+    }
+  }
+
+  public static getAllBooleanKeys(booleans: SfcBooleans): string[] {
+    return [
+      ...Array.from(booleans.gethardwareBooleans().keys()),
+      ...Array.from(booleans.getCustomBooleans().keys())
+    ];
   }
 }
 
@@ -148,10 +218,12 @@ export class SfcStep {
   public actions: BaseAction[] = [];
   public outgoingTransitions: BaseTransition[] = [];
   public incomingTransitions: BaseTransition[] = [];
+  public parentSfcData: SfcData;
 
-  constructor(uid: string, caption: string) {
+  constructor(uid: string, caption: string, parentSfcData?: SfcData) {
     this.uid = uid;
     this.caption = caption;
+    this.parentSfcData = parentSfcData;
   }
 
   public Render(container: HTMLElement, renderActions?: boolean, renderLowerPart?: boolean, manager?:any): HTMLElement {
@@ -464,24 +536,11 @@ export abstract class BaseAction {
 
 
     //TODO: Eine methode um die booleans auszulesen:
-
-
-
-
-
-    // Hole Boolean-Namen aus Step/SfcData --> das kann ja gar nicht funktionieren bullshit.
-    let booleanKeys: string[] = [];
-    if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
-        booleanKeys = Object.keys((step as any).parentSfcData.booleans.getAll());
-    } else if (window && (window as any).sfcManager && (window as any).sfcManager.sfcData) {
-        booleanKeys = Object.keys((window as any).sfcManager.sfcData.booleans.getAll());
+      let booleanKeys: string[] = [];
+        if (step && (step as any).parentSfcData && (step as any).parentSfcData.booleans) {
+      booleanKeys = SfcBooleans.getAllBooleanKeys((step as any).parentSfcData.booleans);
     }
-
-    //________________________________ fällt immer in den Fallback
-    // Fallback: Standardwerte
-    if (booleanKeys.length === 0) {
-        booleanKeys = ["Red_LED", "Yellow_LED", "Green_LED", "Timer1Flag", "Timer2Flag", "merk3", "merk4"];
-    }
+    console.log("Available booleans:", booleanKeys);
 
     booleanKeys.forEach(key => {
       const option = Html(selectTarget, "option", ["value", key], [], key) as HTMLOptionElement;

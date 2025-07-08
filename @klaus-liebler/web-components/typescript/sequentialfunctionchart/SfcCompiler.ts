@@ -34,9 +34,16 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
     // Create a new SfcData instance
     const booleans = new SfcBooleans();
     if (dto.booleans) {
-      Object.entries(dto.booleans).forEach(([key, value]) => {
-        booleans.set(key, value as boolean);
-      });
+      if (dto.booleans.hardware) {
+        Object.entries(dto.booleans.hardware).forEach(([key, value]) => {
+          booleans.addHardwareBooleans(key, value as boolean);
+        });
+      }
+      if (dto.booleans.custom) {
+        Object.entries(dto.booleans.custom).forEach(([key, value]) => {
+          booleans.addCustomBooleans(key, value as boolean);
+        });
+      }
     }
     
     // Create step objects
@@ -102,6 +109,7 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
     // Create and return the SfcData object
     const sfcData = new SfcData(startStep, booleans);
     sfcData.steps = Array.from(stepsMap.values());
+    sfcData.assignParentToAllSteps();
     
     return sfcData;
   } catch (e) {

@@ -34,7 +34,8 @@ export class SfcUI {
   public setContainer(container: HTMLDivElement): void {
     this.container = container;
   }
-  
+
+
   public RenderUI(subcontainer?: HTMLDivElement): void {
     const container = subcontainer || this.container;
     if (!container) {
@@ -111,7 +112,7 @@ export class SfcUI {
   
   private buildBooleanField(container: HTMLElement): void {
     const booleanSection = Html(container, "div", [], ["sfc-boolean-section"]);
-   this.sfcManager.sfcData.booleans.Render(booleanSection);
+   this.sfcManager.sfcData.booleans.Render(booleanSection,this.sfcManager);
   }
 
   public setSfcData(sfcData?: SfcData): void {

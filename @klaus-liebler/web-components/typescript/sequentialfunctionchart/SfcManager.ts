@@ -37,7 +37,7 @@ public static getInstance(): SfcManager {
 
   
   public createNewStep(caption: string): SfcStep {
-    return new SfcStep(`step-${Date.now()}`, caption);
+    return new SfcStep(`step-${Date.now()}`, caption, this.sfcData);
   }
   
   public addStepAbove(targetUid: string): SfcStep {
