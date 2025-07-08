@@ -150,7 +150,8 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
           codeUid: action.codeUid,
           caption: action.caption,
           targetBoolean: action.targetBoolean,
-          qualifier: action.qualifier
+          qualifier: action.qualifier,
+          ms_time: action.durationMs
         })),
         outgoingTransitions: step.outgoingTransitions.map(trans => ({
           type: trans instanceof BaseTransition ? "simple" : "unknown",
@@ -277,6 +278,7 @@ export interface SfcActionDto {
   caption: string;
   targetBoolean: string;
   qualifier: string; // N, S0, L, D, P, SD
+  ms_time: number; // Optional duration in milliseconds
 }
 
 export interface SfcTransitionDto {
