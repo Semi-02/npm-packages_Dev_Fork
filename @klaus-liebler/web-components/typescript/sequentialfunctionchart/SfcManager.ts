@@ -2,8 +2,9 @@ import { SfcData, SfcStep, BaseTransition, SimpleTransition, ActionN, BaseAction
 import { SfcUI } from "./SfcUI";
 import { SfcCompiler } from "./SfcCompiler";
 import { IAppManagement } from "../utils/interfaces";
-import { OkDialog} from "../dialog_controller";
+import { OkDialog, OkCancelDialog } from "../dialog_controller";
 import { Severity } from "../../../commons";
+import { SfcTestDataProvider } from "./SfcTestData";
 
 //Local Filepaths for SFC Files
 //see devicemanager.hh
@@ -34,9 +35,98 @@ public static getInstance(): SfcManager {
   return SfcManager.instance;
 }
 
+//Methods for Menufunctions in sfcUI
 
-  
-  public createNewStep(caption: string): SfcStep {
+public openFromPC(): void {
+  const dialog = new OkCancelDialog(
+    Severity.INFO,
+    "Möchten Sie eine SFC-Datei von Ihrem Computer laden? Ungespeicherte Änderungen gehen verloren.",
+    (ok) => {
+      if (ok) {
+        // TODO: Implementiere File-Upload vom PC
+        console.log("Open SFC from PC - Funktion muss noch implementiert werden");
+       
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
+public openFromLabathome(): void {
+  const dialog = new OkCancelDialog(
+    Severity.INFO,
+    "Möchten Sie eine SFC-Datei vom Server laden? Ungespeicherte Änderungen gehen verloren.",
+    (ok) => {
+      if (ok) {
+       console.log("Open SFC from labathome - Funktion muss noch implementiert werden");
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
+public saveToPC(): void {
+  const dialog = new OkCancelDialog(
+    Severity.INFO,
+    "Möchten Sie die aktuelle SFC auf Ihren Computer herunterladen?",
+    (ok) => {
+      if (ok) {
+        // TODO: Implementiere Download als JSON
+        console.log("Save SFC to PC - Funktion muss noch implementiert werden");
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
+public saveToLabathome(): void {
+  const dialog = new OkCancelDialog(
+    Severity.INFO,
+    "Möchten Sie die aktuelle SFC auf dem Server speichern?",
+    (ok) => {
+      if (ok) {
+        console.log("Save SFC to labathome - Funktion muss noch implementiert werden");
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
+public stopSfc(): void {
+  const dialog = new OkCancelDialog(
+    Severity.WARN,
+    "Möchten Sie die laufende SFC stoppen?",
+    (ok) => {
+      if (ok) {
+        // TODO: Implementiere SFC-Stop Request an Server
+        this.appManagement.ShowSnackbar(Severity.INFO, "SFC Stop - Noch nicht implementiert");
+        console.log("SFC Stop Funktionalität muss noch implementiert werden");
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
+public createNewSFC(): void {
+  const dialog = new OkCancelDialog(
+    Severity.WARN,
+    "Möchten Sie eine neue SFC erstellen? Ungespeicherte Änderungen gehen verloren.",
+    (ok) => {
+      if (ok) {
+        // TODO: Implementiere SFC-Stop Request an Server
+        this.appManagement.ShowSnackbar(Severity.INFO, "SFC create - Noch nicht implementiert");
+        console.log("SFC create Funktionalität muss noch implementiert werden");
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
+
+
+
+
+public createNewStep(caption: string): SfcStep {
     return new SfcStep(`step-${Date.now()}`, caption, this.sfcData);
   }
   
@@ -232,24 +322,35 @@ private updateSfcData(): void {
   };
 
   public async loadSfcFile(path: string){
-    try {
-      const response = await fetch(this.options.httpServerBasePath + path);
-      if (!response.ok) {
-        throw new Error(`Failed to load file: ${response.statusText}`);
+  const dialog = new OkCancelDialog(
+    Severity.INFO,
+    `Möchten Sie die SFC-Datei "${path}" vom Server laden? Ungespeicherte Änderungen gehen verloren.`,
+    async (ok) => {
+      if (ok) {
+        try {
+          const response = await fetch(this.options.httpServerBasePath + path);
+          if (!response.ok) {
+            throw new Error(`Failed to load file: ${response.statusText}`);
+          }
+          
+          const arrayBuffer = await response.arrayBuffer();
+          if (arrayBuffer.byteLength === 0) {
+            console.error(`Error loading file from ${path}: File has size 0`);
+            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Datei "${path}" ist leer (0 Bytes)`));
+            return;
+          }
+          console.log(`Loaded file from ${path} with size: ${arrayBuffer.byteLength} bytes`);
+          console.log("ArrayBuffer:", arrayBuffer);
+          const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
+          this.setSfcData(sfcData);
+          this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei "${path}" erfolgreich geladen`);
+        } catch (error) {
+          this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Fehler beim Laden der Datei "${path}": ${error.message}`));
+          console.error(`Error loading file from ${path}:`, error);
+        }
       }
-      
-      const arrayBuffer = await response.arrayBuffer();
-      if (arrayBuffer.byteLength === 0) {
-        console.error(`Error loading file from ${path}: File has size 0`);
-        return;
-      }
-      console.log(`Loaded file from ${path} with size: ${arrayBuffer.byteLength} bytes`);
-      console.log("ArrayBuffer:", arrayBuffer);
-      const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
-      this.setSfcData(sfcData);
-    } catch (error) {
-      this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Failed to load file from ${path}`));
-      console.error(`Error loading file from ${path}:`, error);
     }
-  }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
 }

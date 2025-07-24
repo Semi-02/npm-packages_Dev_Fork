@@ -61,15 +61,16 @@ export class SfcUI {
         var mm: MenuManager = new MenuManager(
             [
                 new Menu("File", [
-                    new MenuItem("📂 Open from (PC)", () => null),
-                    new MenuItem("📂 Open from (labathome)", () => null),
+                    new MenuItem("📂 New SFC ", () => this.sfcManager.createNewSFC()),
+                    new MenuItem("📂 Open from (PC)", () => this.sfcManager.openFromPC()),
+                    new MenuItem("📂 Open from (labathome)", () => this.sfcManager.openFromLabathome()),
                     new MenuItem("📂 Open Default (labathome)", () => this.sfcManager.loadSfcFile(DEFAULTSFC_FILEPATH)),
-                    new MenuItem("💾 Save to (Pc)", () => null),
-                    new MenuItem("💾 Save to (labathome)", () => null),
+                    new MenuItem("💾 Save to (Pc)", () => this.sfcManager.saveToPC()),
+                    new MenuItem("💾 Save to (labathome)", () => this.sfcManager.saveToLabathome()),
                   
                 ]),
                 new Menu("Run", [
-                    new MenuItem("Start ", () => 
+                    new MenuItem("▶️ Start ", () => 
                       this.sfcManager.postSfcFile(TEMPSFC_FILEPATH,
                         (path) => {
                           const builder = new flatbuffers.Builder(1024);
@@ -78,7 +79,7 @@ export class SfcUI {
                           this.appManagement.SendFinishedBuilder(SFC_NAMESPACE, builder, 3000);
                         }),
                     ),
-                    new MenuItem("× Stop", () => null),
+                    new MenuItem("⏹️ Stop", () => this.sfcManager.stopSfc()),
                     new MenuItem("💾 Save as Default", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
                 ]),
                 
