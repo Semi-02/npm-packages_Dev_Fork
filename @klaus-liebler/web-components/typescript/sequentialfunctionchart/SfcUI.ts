@@ -61,16 +61,15 @@ export class SfcUI {
         var mm: MenuManager = new MenuManager(
             [
                 new Menu("File", [
-                    new MenuItem("📂 Open (Local)", () => null),
-                    new MenuItem("📂 Open (labathome)", () => null),
+                    new MenuItem("📂 Open from (PC)", () => null),
+                    new MenuItem("📂 Open from (labathome)", () => null),
                     new MenuItem("📂 Open Default (labathome)", () => this.sfcManager.loadSfcFile(DEFAULTSFC_FILEPATH)),
-                    new MenuItem("💾 Save (Local)", () => null),
-                    new MenuItem("💾 Save (labathome)", () => null),
-                    new MenuItem("💾 Load Testdata TrafficLights", () => this.sfcManager.setSfcData(SfcTestDataProvider.getTrafficLightSfcData())),
-                    new MenuItem("💾 Load Testdata", () => this.sfcManager.setSfcData(SfcTestDataProvider.getBasicSfcData())),
+                    new MenuItem("💾 Save to (Pc)", () => null),
+                    new MenuItem("💾 Save to (labathome)", () => null),
+                  
                 ]),
-                new Menu("Debug", [
-                    new MenuItem("☭ Start Debug", () => 
+                new Menu("Run", [
+                    new MenuItem("Start ", () => 
                       this.sfcManager.postSfcFile(TEMPSFC_FILEPATH,
                         (path) => {
                           const builder = new flatbuffers.Builder(1024);
@@ -79,13 +78,10 @@ export class SfcUI {
                           this.appManagement.SendFinishedBuilder(SFC_NAMESPACE, builder, 3000);
                         }),
                     ),
-                    new MenuItem("× Stop Debug", () => null),
-                    new MenuItem("👣 Set as Startup-App", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
+                    new MenuItem("× Stop", () => null),
+                    new MenuItem("💾 Save as Default", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
                 ]),
-                new Menu("Simulation", [
-                    new MenuItem("➤ Start Simulation", () => null),
-                    new MenuItem("× Stop Simulation", () => null)
-                ])
+                
             ]
         );
     mm.Render(menuContainer);
