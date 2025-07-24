@@ -28,6 +28,7 @@ private static instance: SfcManager;
     public sfcCompiler: SfcCompiler,
     private appManagement: IAppManagement,
     private options: SfcOptions = new SfcOptions(""),
+    private onFirstLoad: boolean = false,
     
   ) {
   }
@@ -321,36 +322,48 @@ private updateSfcData(): void {
     }
   };
 
+
   public async loadSfcFile(path: string){
-  const dialog = new OkCancelDialog(
-    Severity.INFO,
-    `Möchten Sie die SFC-Datei "${path}" vom Server laden? Ungespeicherte Änderungen gehen verloren.`,
-    async (ok) => {
-      if (ok) {
-        try {
-          const response = await fetch(this.options.httpServerBasePath + path);
-          if (!response.ok) {
-            throw new Error(`Failed to load file: ${response.statusText}`);
+    if(!this.onFirstLoad){
+      // Beim ersten Laden direkt laden ohne Dialog
+      this.onFirstLoad = true;
+      await this.performLoad(path);
+    } else {
+      // Bei allen folgenden Aufrufen Dialog anzeigen
+      const dialog = new OkCancelDialog(
+        Severity.INFO,
+        `Möchten Sie die SFC-Datei "${path}" vom Server laden? Ungespeicherte Änderungen gehen verloren.`,
+        async (ok) => {
+          if (ok) {
+            await this.performLoad(path);
           }
-          
-          const arrayBuffer = await response.arrayBuffer();
-          if (arrayBuffer.byteLength === 0) {
-            console.error(`Error loading file from ${path}: File has size 0`);
-            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Datei "${path}" ist leer (0 Bytes)`));
-            return;
-          }
-          console.log(`Loaded file from ${path} with size: ${arrayBuffer.byteLength} bytes`);
-          console.log("ArrayBuffer:", arrayBuffer);
-          const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
-          this.setSfcData(sfcData);
-          this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei "${path}" erfolgreich geladen`);
-        } catch (error) {
-          this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Fehler beim Laden der Datei "${path}": ${error.message}`));
-          console.error(`Error loading file from ${path}:`, error);
         }
-      }
+      );
+      this.appManagement.ShowDialog(dialog);
     }
-  );
-  this.appManagement.ShowDialog(dialog);
-}
+  }
+
+  private async performLoad(path: string): Promise<void> {
+    try {
+      const response = await fetch(this.options.httpServerBasePath + path);
+      if (!response.ok) {
+        throw new Error(`Failed to load file: ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      if (arrayBuffer.byteLength === 0) {
+        console.error(`Error loading file from ${path}: File has size 0`);
+        this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Datei "${path}" ist leer (0 Bytes)`));
+        return;
+      }
+      console.log(`Loaded file from ${path} with size: ${arrayBuffer.byteLength} bytes`);
+      console.log("ArrayBuffer:", arrayBuffer);
+      const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
+      this.setSfcData(sfcData);
+      this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei "${path}" erfolgreich geladen`);
+    } catch (error) {
+      this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Fehler beim Laden der Datei "${path}": ${error.message}`));
+      console.error(`Error loading file from ${path}:`, error);
+    }
+  }
 }
