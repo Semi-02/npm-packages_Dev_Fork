@@ -44,9 +44,42 @@ public openFromPC(): void {
     "Möchten Sie eine SFC-Datei von Ihrem Computer laden? Ungespeicherte Änderungen gehen verloren.",
     (ok) => {
       if (ok) {
-        // TODO: Implementiere File-Upload vom PC
-        console.log("Open SFC from PC - Funktion muss noch implementiert werden");
-       
+        // Erstelle ein verstecktes File-Input-Element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.style.display = 'none';
+        
+        input.onchange = (e) => {
+          const files = input.files;
+          if (!files || files.length === 0) return;
+          
+          const reader = new FileReader();
+          reader.onloadend = (e) => {
+            try {
+              const arrayBuffer = e.target.result as ArrayBuffer;
+              if (arrayBuffer.byteLength === 0) {
+                this.appManagement.ShowSnackbar(Severity.ERROR, "Leere Datei");
+                return;
+              }
+              
+              const sfcData = this.sfcCompiler.compileJSONtoSfcData(arrayBuffer);
+              this.setSfcData(sfcData);
+              this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei "${files[0].name}" erfolgreich geladen`);
+            } catch (error) {
+              this.appManagement.ShowDialog(new OkDialog(
+                Severity.ERROR, 
+                `Fehler beim Laden der Datei: ${error.message}`
+              ));
+            }
+          };
+          reader.readAsArrayBuffer(files[0]);
+        };
+        
+        // Füge das Element zum DOM hinzu, klicke es und entferne es wieder
+        document.body.appendChild(input);
+        input.click();
+        document.body.removeChild(input);
       }
     }
   );
@@ -59,7 +92,12 @@ public openFromLabathome(): void {
     "Möchten Sie eine SFC-Datei vom Server laden? Ungespeicherte Änderungen gehen verloren.",
     (ok) => {
       if (ok) {
-       console.log("Open SFC from labathome - Funktion muss noch implementiert werden");
+        // Zeige Dialog zur Eingabe des Dateinamens
+        const filename = prompt("Dateiname eingeben (ohne .json Endung):");
+        if (filename) {
+          const fullPath = `${SFCSTORE_BASE_DIRECTORY}${filename}.json`;
+          this.loadSfcFile(fullPath);
+        }
       }
     }
   );
@@ -72,8 +110,34 @@ public saveToPC(): void {
     "Möchten Sie die aktuelle SFC auf Ihren Computer herunterladen?",
     (ok) => {
       if (ok) {
-        // TODO: Implementiere Download als JSON
-        console.log("Save SFC to PC - Funktion muss noch implementiert werden");
+        try {
+          // Verwende den SfcCompiler, um JSON zu generieren
+          const jsonString = this.sfcCompiler.Compile(this.sfcData);
+          
+          // Erstelle einen Blob und einen Download-Link
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const filename = "sequentialfunctionchart.json";
+          
+          const element = document.createElement('a');
+          element.style.display = 'none';
+          element.href = url;
+          element.download = filename;
+          
+          // Füge den Link zum DOM hinzu, klicke ihn und entferne ihn wieder
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+          
+          // Räume auf und zeige Erfolgsmeldung
+          window.URL.revokeObjectURL(url);
+          this.appManagement.ShowSnackbar(Severity.SUCCESS, "SFC erfolgreich gespeichert");
+        } catch (error) {
+          this.appManagement.ShowDialog(new OkDialog(
+            Severity.ERROR, 
+            `Fehler beim Speichern der Datei: ${error.message}`
+          ));
+        }
       }
     }
   );
@@ -86,7 +150,15 @@ public saveToLabathome(): void {
     "Möchten Sie die aktuelle SFC auf dem Server speichern?",
     (ok) => {
       if (ok) {
-        console.log("Save SFC to labathome - Funktion muss noch implementiert werden");
+        // Zeige Dialog zur Eingabe des Dateinamens
+        const filename = prompt("Dateiname eingeben (ohne .json Endung):");
+        if (filename) {
+          const fullPath = `${SFCSTORE_BASE_DIRECTORY}${filename}.json`;
+          this.postSfcFile(fullPath, 
+            () => this.appManagement.ShowSnackbar(Severity.SUCCESS, `SFC als "${filename}.json" gespeichert`),
+            () => this.appManagement.ShowSnackbar(Severity.ERROR, `Fehler beim Speichern von "${filename}.json"`)
+          );
+        }
       }
     }
   );
