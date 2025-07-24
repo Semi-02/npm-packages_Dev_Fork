@@ -57,16 +57,16 @@ public compileJSONtoSfcData(arrayBuffer): SfcData {
           stepDto.actions.forEach(actionDto => {
             let action: BaseAction;
             switch (actionDto.qualifier) {
-              case "N": action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "S": action = new ActionS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "L": action = new ActionL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "D": action = new ActionD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "P": action = new ActionP(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "SD": action = new ActionSD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "R": action = new ActionR(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "DS": action = new ActionDS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              case "SL": action = new ActionSL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
-              default: action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean); break;
+              case "N": action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "S": action = new ActionS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "L": action = new ActionL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "D": action = new ActionD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "P": action = new ActionP(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "SD": action = new ActionSD(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "R": action = new ActionR(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "DS": action = new ActionDS(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              case "SL": action = new ActionSL(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
+              default: action = new ActionN(actionDto.codeUid, actionDto.caption, actionDto.targetBoolean, actionDto.ms_time || 0); break;
             }
             step.actions.push(action);
           });
