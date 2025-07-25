@@ -367,4 +367,50 @@
   border-left-style: outset;
 }
 
+/* Editable field styles - mit Bleistift Icon */
+.editable-field-hover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.editable-field-hover::after {
+  content: "✏️";
+  font-size: 0.8em;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.editable-field-hover:hover::after {
+  opacity: 0.7;
+}
+
+/* Spezifische Styles für verschiedene editierbare Felder */
+.step-name .editable-field-hover::after {
+  font-size: 0.7em;
+}
+
+
+.transition-condition.editable-field-hover::after {
+  font-size: 0.7em;
+}
+
+.transition-condition.editable-field-hover:hover::after {
+  opacity: 0.7;
+}
+
+/* Standardstile für dauerhaft sichtbare Editierfelder */
+.editable-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.editable-field::after {
+  content: "✏️";
+  font-size: 0.8em;
+  margin-left: 4px;
+  opacity: 0.7;
+}
 

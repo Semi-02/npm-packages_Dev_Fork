@@ -143,7 +143,7 @@ export class SfcBooleans {
     this.customBooleans.forEach((value, name) => {
       const boolRow = Html(booleanFieldsContainer, "div", [], ["bool-row"]);
       // Editable name
-      const nameSpan = Html(boolRow, "span", [], ["bool-name"], name) as HTMLSpanElement;
+      const nameSpan = Html(boolRow, "span", [], ["bool-name", "editable-field-hover"], name) as HTMLSpanElement;
       nameSpan.contentEditable = "true";
       nameSpan.title = "Klicken zum Bearbeiten";
       nameSpan.addEventListener("blur", () => {
@@ -242,7 +242,7 @@ export class SfcStep {
     nameArea.setAttribute("data-step-uid", this.uid);
 
     // Mach das Step-Name-Span editierbar
-    const nameSpan = Html(nameArea, "span", [], [], this.caption) as HTMLSpanElement;
+    const nameSpan = Html(nameArea, "span", [], ["editable-field-hover"], this.caption) as HTMLSpanElement;
     nameSpan.contentEditable = "true";
     nameSpan.style.outline = "none";
     nameSpan.title = "Klicken zum Bearbeiten";
@@ -286,7 +286,7 @@ export class SfcStep {
     const transCol = Html(columns, "div", [], ["step-lower-trans-col"]);
     if (this.outgoingTransitions.length > 0) {
       this.outgoingTransitions.forEach((transition, idx) => {
-        const condDiv = Html(transCol, "div", [], ["transition-condition"]) as HTMLDivElement;
+        const condDiv = Html(transCol, "div", [], ["transition-condition", "editable-field-hover"]) as HTMLDivElement;
         condDiv.contentEditable = "true";
         condDiv.innerText = transition.condition.join(" && ");
         condDiv.title = "Erlaubte Struktur: Variablen, !, &&, ||, (, ) (z.B. a && (b || !c))";
@@ -526,7 +526,7 @@ export abstract class BaseAction {
 
     // Name-Feld (jetzt nach Dauer)
     const tdCaption = Html(actionRow, "td", [], []);
-    const input = Html(tdCaption, "input", ["type", "text"], [], undefined) as HTMLInputElement;
+    const input = Html(tdCaption, "input", ["type", "text"], ["editable-field-hover"], undefined) as HTMLInputElement;
     input.value = this.caption;
     input.style.width = "95%";
 
