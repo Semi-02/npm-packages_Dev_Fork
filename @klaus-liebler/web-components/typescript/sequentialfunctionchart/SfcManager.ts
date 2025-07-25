@@ -5,6 +5,9 @@ import { IAppManagement } from "../utils/interfaces";
 import { OkDialog, OkCancelDialog } from "../dialog_controller";
 import { Severity } from "../../../commons";
 import { SfcTestDataProvider } from "./SfcTestData";
+import { RequestSFCRun, RequestSFCStop, RequestWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
+import * as flatbuffers from 'flatbuffers';
+import { SFC_NAMESPACE } from "../screen_controller/develop_sfc_controller";
 
 //Local Filepaths for SFC Files
 //see devicemanager.hh
@@ -171,9 +174,13 @@ public stopSfc(): void {
     "Möchten Sie die laufende SFC stoppen?",
     (ok) => {
       if (ok) {
-        // TODO: Implementiere SFC-Stop Request an Server
-        this.appManagement.ShowSnackbar(Severity.INFO, "SFC Stop - Noch nicht implementiert");
-        console.log("SFC Stop Funktionalität muss noch implementiert werden");
+        // Erstelle und sende RequestSFCStop über Flatbuffers
+        const builder = new flatbuffers.Builder(1024);
+        const requestOffset = RequestSFCStop.createRequestSFCStop(builder);
+        builder.finish(RequestWrapper.createRequestWrapper(builder, Requests.RequestSFCStop, requestOffset));
+        this.appManagement.SendFinishedBuilder(SFC_NAMESPACE, builder, 3000);
+        
+        this.appManagement.ShowSnackbar(Severity.INFO, "SFC Stop-Befehl gesendet");
       }
     }
   );
