@@ -58,34 +58,40 @@ export class SfcUI {
   
   private buildMenu(subcontainer: HTMLElement): void {
     const menuContainer = Html(subcontainer, "div", [], ["sfc-menu-container"]) as HTMLDivElement;
-        var mm: MenuManager = new MenuManager(
-            [
-                new Menu("File", [
-                    new MenuItem("📂 New SFC ", () => this.sfcManager.createNewSFC()),
-                    new MenuItem("📂 Open from (PC)", () => this.sfcManager.openFromPC()),
-                    new MenuItem("📂 Open from (labathome)", () => this.sfcManager.openFromLabathome()),
-                    new MenuItem("📂 Open Default (labathome)", () => this.sfcManager.loadSfcFile(DEFAULTSFC_FILEPATH)),
-                    new MenuItem("💾 Save to (Pc)", () => this.sfcManager.saveToPC()),
-                    new MenuItem("💾 Save to (labathome)", () => this.sfcManager.saveToLabathome()),
-                  
-                ]),
-                new Menu("Run", [
-                    new MenuItem("▶️ Start ", () => 
-                      this.sfcManager.postSfcFile(TEMPSFC_FILEPATH,
-                        (path) => {
-                          const builder = new flatbuffers.Builder(1024);
-                          const requestOffset = RequestSFCRun.createRequestSFCRun(builder);
-                          builder.finish(RequestWrapper.createRequestWrapper(builder, Requests.RequestSFCRun, requestOffset));
-                          this.appManagement.SendFinishedBuilder(SFC_NAMESPACE, builder, 3000);
-                        }),
-                    ),
-                    new MenuItem("⏹️ Stop", () => this.sfcManager.stopSfc()),
-                    new MenuItem("💾 Save as Default", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
-                ]),
-                
-            ]
-        );
+    var mm: MenuManager = new MenuManager(
+      [
+        new Menu("File", [
+          new MenuItem("📂 New SFC ", () => this.sfcManager.createNewSFC()),
+          new MenuItem("📂 Open from (PC)", () => this.sfcManager.openFromPC()),
+          new MenuItem("📂 Open from (labathome)", () => this.sfcManager.openFromLabathome()),
+          new MenuItem("📂 Open Default (labathome)", () => this.sfcManager.loadSfcFile(DEFAULTSFC_FILEPATH)),
+          new MenuItem("💾 Save to (Pc)", () => this.sfcManager.saveToPC()),
+          new MenuItem("💾 Save to (labathome)", () => this.sfcManager.saveToLabathome()),
+        ]),
+        new Menu("Run", [
+          new MenuItem("▶️ Start ", () => 
+            this.sfcManager.postSfcFile(TEMPSFC_FILEPATH,
+              (path) => {
+                const builder = new flatbuffers.Builder(1024);
+                const requestOffset = RequestSFCRun.createRequestSFCRun(builder);
+                builder.finish(RequestWrapper.createRequestWrapper(builder, Requests.RequestSFCRun, requestOffset));
+                this.appManagement.SendFinishedBuilder(SFC_NAMESPACE, builder, 3000);
+              }),
+          ),
+          new MenuItem("⏹️ Stop", () => this.sfcManager.stopSfc()),
+          new MenuItem("💾 Save as Default", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
+        ]),
+        new Menu("Help", [
+          new MenuItem("❓ Show Tutorial", () => this.sfcManager.showTutorial())
+        ]), // Added 'true' to indicate this is a right-aligned menu
+      ]
+    );
+
+    // Add CSS to position the Help menu at the far right
     mm.Render(menuContainer);
+    
+   
+   
   }
   
   private buildView(container: HTMLElement): void {

@@ -202,6 +202,38 @@ public createNewSFC(): void {
   this.appManagement.ShowDialog(dialog);
 }
 
+public showTutorial(): void {
+  const tutorialContent = `
+# Sequential Function Chart Tutorial
+
+## Introduction
+This tool allows you to create and edit Sequential Function Charts (SFC) which are used for programming sequential control systems.
+
+## Basic Functions:
+1. **Create Steps**: Use the + buttons to add steps above or below existing ones
+2. **Add Actions**: Click the + button in action boxes to add new actions
+3. **Edit Transitions**: Click on transition conditions to edit them
+4. **Manage Booleans**: Add and edit boolean variables in the right panel
+
+## Menu Functions:
+- **File**: Create new SFCs, open from PC/server, save to PC/server
+- **Run**: Execute the SFC, stop execution, save as default
+
+For more information, visit our documentation website.
+  `;
+
+  const dialog = new OkCancelDialog(
+    Severity.INFO,
+    tutorialContent,
+    (ok) => {
+      if (ok) {
+        this.appManagement.ShowSnackbar(Severity.SUCCESS, "Tutorial closed");
+      }
+    }
+  );
+  this.appManagement.ShowDialog(dialog);
+}
+
 
 
 
