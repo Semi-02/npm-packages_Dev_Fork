@@ -201,6 +201,7 @@
   background-color: #f5f5f5;
   text-align: center;
   position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Added shadow effect */
 }
 
 .step-bridge {
@@ -226,6 +227,7 @@
   height: 150px;         /* neu: immer gleich hoch */
   max-height: 150px;
   box-sizing: border-box;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Added shadow effect */
 }
 
 .actions-table {
