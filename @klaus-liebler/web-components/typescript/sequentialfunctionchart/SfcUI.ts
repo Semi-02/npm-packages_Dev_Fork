@@ -106,11 +106,14 @@ export class SfcUI {
     Html(diagramSection, "h3", [], ["diagram-title"], "SFC Diagram");
     
     const initalStep = new SfcStep("initial", "Initial Step");
-    initalStep.Render(diagramSection, false, true, this.sfcManager); // Manager übergeben!
+    const initialStepElement = initalStep.Render(diagramSection, false, true, this.sfcManager);
+    initialStepElement.classList.add("special-step", "initial-step"); // Add classes for styling
+    
     this.sfcManager.sfcData.Render(diagramSection, this.sfcManager);
 
     const endStep = new SfcStep("end", "End Step");
-    endStep.Render(diagramSection, false, false, this.sfcManager); // Manager übergeben!
+    const endStepElement = endStep.Render(diagramSection, false, false, this.sfcManager);
+    endStepElement.classList.add("special-step", "end-step"); // Add classes for styling
   }
   
   private buildBooleanField(container: HTMLElement): void {

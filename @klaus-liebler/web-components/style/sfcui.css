@@ -414,3 +414,32 @@
   opacity: 0.7;
 }
 
+/* Special styling for start and end steps */
+.special-step .step-name {
+  border: 4px double #333;
+  border-radius: 4px;
+}
+
+.initial-step .step-name {
+  background-color: #f0f7ff;
+}
+
+.end-step .step-name {
+  background-color: #fff0f0;
+}
+
+/* Hide buttons for end step */
+.end-step .step-name-btn {
+  display: none !important;
+}
+
+/* Hide specific buttons for initial step */
+.initial-step .step-name-btn.top-left{
+  display: none !important; 
+}
+.initial-step .step-name-btn.top-right {
+  display: none !important;
+}
+
+
+
