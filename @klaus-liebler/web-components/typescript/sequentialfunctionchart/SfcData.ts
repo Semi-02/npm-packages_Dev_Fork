@@ -68,6 +68,7 @@ export class SfcData {
 export class SfcBooleans {
   private hardwareBooleans: Map<string, boolean> = new Map<string, boolean>();
   private customBooleans: Map<string, boolean> = new Map<string, boolean>();
+  private readonly MAX_NAME_LENGTH = 10; // Maximum allowed characters
 
   constructor() {  }
 
@@ -109,7 +110,7 @@ export class SfcBooleans {
     return { hardware, custom };
   }
 
-  public Render(container: HTMLElement,manager?:SfcManager): void {
+  public Render(container: HTMLElement, manager?: SfcManager): void {
     const booleanFieldsContainer = Html(container, "div", [], ["boolean-fields"]);
 
     // Hardware-Bereich
@@ -145,17 +146,29 @@ export class SfcBooleans {
       // Editable name
       const nameSpan = Html(boolRow, "span", [], ["bool-name", "editable-field-hover"], name) as HTMLSpanElement;
       nameSpan.contentEditable = "true";
-      nameSpan.title = "Klicken zum Bearbeiten";
+      nameSpan.title = `Klicken zum Bearbeiten (max. ${this.MAX_NAME_LENGTH} Zeichen)`;
+      
       nameSpan.addEventListener("blur", () => {
         const newName = nameSpan.innerText.trim();
+        
+        // Check if name exceeds maximum length
+        if (newName.length > this.MAX_NAME_LENGTH) {
+          // Use the public method instead of accessing private property
+          manager.showSnackbar(2, `Name zu lang! Maximal ${this.MAX_NAME_LENGTH} Zeichen erlaubt.`);
+          nameSpan.innerText = name; // revert to original
+          return;
+        }
+        
+        // Proceed with normal validation
         if (newName && newName !== name && !this.customBooleans.has(newName)) {
           const currentValue = this.customBooleans.get(name);
           this.customBooleans.delete(name);
           this.customBooleans.set(newName, currentValue);
           // Re-render to update UI
-          manager.sfcUI.RenderUI()
-        } else {
-          nameSpan.innerText = name; // revert if invalid
+          manager.sfcUI.RenderUI();
+        } else if (newName !== name) {
+          // Name already exists or is invalid
+          nameSpan.innerText = name; // revert to original
         }
       });
 
@@ -167,7 +180,7 @@ export class SfcBooleans {
         this.customBooleans.delete(name);
         boolRow.remove();
          // Re-render to update UI
-        manager.sfcUI.RenderUI()
+        manager.sfcUI.RenderUI();
       };
 
       const selectContainer = Html(boolRow, "div", [], ["bool-value-container"]);
@@ -199,7 +212,7 @@ export class SfcBooleans {
         }
         self.customBooleans.set(newName, false);
          // Re-render to update UI
-          manager.sfcUI.RenderUI()
+          manager.sfcUI.RenderUI();
       };
     }
   }

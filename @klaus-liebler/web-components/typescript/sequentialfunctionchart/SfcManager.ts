@@ -234,9 +234,9 @@ For more information, visit our documentation website.
   this.appManagement.ShowDialog(dialog);
 }
 
-
-
-
+public showSnackbar(type: number, message: string): void {
+  this.appManagement.ShowSnackbar(type, message);
+}
 
 public createNewStep(caption: string): SfcStep {
     return new SfcStep(`step-${Date.now()}`, caption, this.sfcData);
