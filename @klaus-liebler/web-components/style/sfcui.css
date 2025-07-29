@@ -283,30 +283,61 @@
 }
 
 .step-lower-trans-col {
-  flex: 1;
+  flex: 0 1 auto; /* Don't expand to fill available space */
+  min-width: 0; /* Allow the container to shrink if needed */
+  max-width: 320px; /* Limit the overall width */
+  padding-left: 0; /* Remove left padding to move content left */
+  padding-top: 12px; /* Add top padding to push content down */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  padding-left: 8px;
+}
+
+/* Focus styles for all editable fields */
+[contenteditable="true"]:focus {
+  outline: 2px solid #007bff;
+  border-radius: 3px;
+  padding: 2px;
+  background-color: #f8f9fa;
+}
+
+/* Specific styles for step name when editing */
+.step-name [contenteditable="true"]:focus {
+  outline: 2px solid #007bff;
+  background-color: #f0f7ff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+/* Specific styles for transition condition when editing */
+.transition-condition[contenteditable="true"]:focus {
+  outline: 2px solid #28a745;
+  background-color: #f0fff5;
 }
 
 .transition-condition {
   font-size: 0.9em;
   font-family: monospace;
-  margin: 2px 0;
+  margin: 6px 0 2px -75px; /* Add negative left margin to pull left and more top margin */
   color: #222;
+  max-width: 300px; /* Limit the maximum width */
+  width: auto; /* Allow natural width based on content */
+  display: inline-block; /* Keep it inline but respect width properties */
+  white-space: normal; /* Allow text to wrap */
+  overflow-wrap: break-word; /* Break long words if needed */
+  background-color: #f8f8f8; /* Light background to visually contain it */
+  padding: 4px 8px; /* Add some padding for better readability */
+  border-radius: 3px; /* Rounded corners */
+  border: 1px solid #e0e0e0; /* Subtle border */
+  align-self: flex-start; /* Align to left edge of flex container */
+  position: relative; /* Enable positioning context */
 }
 
-.condition-edit-button {
-  margin-left: 4px;
-  background-color: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 0.8em;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+  .transition-condition {
+    max-width: 90%; /* Take more width on small screens */
+    margin-left: 0; /* Reset negative margin on small screens */
+  }
 }
 
 .ui-reset-btn {
@@ -433,11 +464,8 @@
   display: none !important;
 }
 
-/* Hide specific buttons for initial step */
-.initial-step .step-name-btn.top-left{
-  display: none !important; 
-}
-.initial-step .step-name-btn.top-right {
+/* Hide all buttons for initial step */
+.initial-step .step-name-btn {
   display: none !important;
 }
 

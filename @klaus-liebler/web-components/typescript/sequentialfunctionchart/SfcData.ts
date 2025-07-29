@@ -257,7 +257,6 @@ export class SfcStep {
     // Mach das Step-Name-Span editierbar
     const nameSpan = Html(nameArea, "span", [], ["editable-field-hover"], this.caption) as HTMLSpanElement;
     nameSpan.contentEditable = "true";
-    nameSpan.style.outline = "none";
     nameSpan.title = "Klicken zum Bearbeiten";
 
     // Speichern bei Verlassen des Feldes oder Enter
