@@ -5,6 +5,7 @@ import {Svg} from "../utils/common"
 import { SimulationContext } from "./SimulationContext";
 import { KeyValueTuple } from "@klaus-liebler/commons";
 
+
 export enum PositionType{
     Default,
     Input,
@@ -46,6 +47,11 @@ export abstract class FlowchartOperator {
     get OutputSvgG(): SVGGElement { return this.outputSvgG;}
     private debugInfoSvgText:SVGTextElement;
     private lastMouseDownDt:number=0;;
+    private isSelected = false;
+    private isDragging: boolean = false;
+    private titleSvgText: SVGTextElement;
+
+
 
     get TypeInfo(){return this.typeInfo;}
 
@@ -63,16 +69,21 @@ export abstract class FlowchartOperator {
         this.MAX_INDEX=0;
     }
 
-    public ShowAsSelected(state:boolean)
-    {
-        if(state)
-        {
+    public ShowAsSelected(state: boolean) {
+        console.log("ShowAsSelected", this.Caption, state);
+        this.isSelected = state;
+
+        if (state) {
             this.box.classList.add('selected');
-        }
-        else{
+        } else {
             this.box.classList.remove('selected');
         }
     }
+    
+    
+public IsSelected(): boolean {
+    return this.isSelected;
+}
 
     public SetDebugInfoText(text:string):void{
         this.debugInfoSvgText.textContent=text;
@@ -117,14 +128,77 @@ export abstract class FlowchartOperator {
         return;
     }
 
+    //Geiler neuer Dialog zum Umbenennen
+    public showRenameDialog(): void {
+
+        
+    // Bestehendes Dialog-Fenster entfernen (wenn doppelt geöffnet)
+    const existing = document.getElementById("rename-dialog");
+    if (existing) existing.remove();
+
+    const dialog = document.createElement("div");
+    dialog.id = "rename-dialog";
+    dialog.style.position = "fixed";
+    dialog.style.top = "50%";
+    dialog.style.left = "50%";
+    dialog.style.transform = "translate(-50%, -50%)";
+    dialog.style.backgroundColor = "white";
+    dialog.style.border = "2px solid #444";
+    dialog.style.borderRadius = "10px";
+    dialog.style.padding = "20px";
+    dialog.style.boxShadow = "0 4px 10px rgba(0,0,0,0.3)";
+    dialog.style.zIndex = "10000";
+    dialog.style.minWidth = "300px";
+
+    const title = document.createElement("h3");
+    title.innerText = "Block umbenennen";
+    dialog.appendChild(title);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = this.Caption;
+    input.style.width = "100%";
+    input.style.margin = "10px 0";
+    dialog.appendChild(input);
+
+    const buttonRow = document.createElement("div");
+    buttonRow.style.display = "flex";
+    buttonRow.style.justifyContent = "flex-end";
+    buttonRow.style.gap = "10px";
+
+    const btnOk = document.createElement("button");
+    btnOk.innerText = "OK";
+    btnOk.onclick = () => {
+        const newName = input.value.trim();
+        if (newName !== "") {
+            this.Caption = newName;
+        }
+        dialog.remove();
+    };
+
+    const btnCancel = document.createElement("button");
+    btnCancel.innerText = "Abbrechen";
+    btnCancel.onclick = () => dialog.remove();
+
+    buttonRow.appendChild(btnCancel);
+    buttonRow.appendChild(btnOk);
+    dialog.appendChild(buttonRow);
+
+    document.body.appendChild(dialog);
+
+    input.focus();
+    input.select();
+}
+
+
     constructor(private parent: Flowchart, private caption: string, private typeInfo: TypeInfo, protected configurationData:KeyValueTuple[]|null) {
         this.index = FlowchartOperator.MAX_INDEX++;
         this.elementSvgG = <SVGGElement>Svg(parent.OperatorsLayer, "g", [], ["operator"]);
         this.elementSvgG.setAttribute('data-operator-index', "" + this.index);
         let dragGroup = <SVGGElement>Svg(this.elementSvgG, "g", [], []);
         this.box = <SVGRectElement>Svg(dragGroup, "rect", ["width","140", "height", "100", "rx", "10", "ry", "10"], ["operator-box"]);
-        let title = <SVGTextElement>Svg(dragGroup,"text", ["x", "5", "y", "21"],["operator-title"]);
-        title.textContent = caption;
+this.titleSvgText = <SVGTextElement>Svg(dragGroup,"text", ["x", "5", "y", "21"],["operator-title"]);
+this.titleSvgText.textContent = caption;
         this.debugInfoSvgText = <SVGTextElement>Svg(dragGroup, "text", ["x", "0", "y", "100"],["operator-debuginfo"]);
         this.debugInfoSvgText.textContent="No debug info";
 
@@ -132,43 +206,92 @@ export abstract class FlowchartOperator {
         this.outputSvgG= <SVGGElement>Svg(this.elementSvgG,"g", ["transform", "translate(140 50)"], ["operator-outputs"]);
 
 
-        this.elementSvgG.onmousedown = (e) => {
-            this.lastMouseDownDt=Date.now()
-            //console.log(`FlowchartOperator ${this.Caption} onmousedown ${this.lastMouseDownDt}`);
-        };
-        this.elementSvgG.onmouseup = (e) => {
-            var diff = Date.now()-this.lastMouseDownDt
-            //console.log(`FlowchartOperator ${this.Caption} onmouseup diff=${diff}`);
-            if(diff<400){
-                parent._notifyOperatorClicked(this, e);
-            }
-        };
         
+
+  this.elementSvgG.addEventListener("click", (e) => {
+    console.log("CLICK on elementSvgG", this.Caption);
+
+    if (this.isDragging) {
+        console.log("Skip click due to drag");
+        this.isDragging = false; // Reset für nächste Interaktion
+        return;
+    }
+
+    e.stopPropagation();
+    parent._notifyOperatorClicked(this, e);
+});
+
         
-        dragGroup.onmousedown = (e) => {
-            if (this.parent.UserMayMoveOperators()) {
+        dragGroup.addEventListener("pointerdown", (e) => {
+            if (this.parent.UserMayMoveOperators() && !e.shiftKey) {
                 this.RegisterDragging(e);
             }
-        }
+            e.stopPropagation();
+        });
+        
+        
+        
         
     }
     
-    public RegisterDragging(e:MouseEvent)
-    {
-        let offsetX= e.clientX-this.x;
-        let offsetY = e.clientY-this.y;
+RegisterDragging(startEvent: MouseEvent): void {
+    const startX = startEvent.clientX;
+    const startY = startEvent.clientY;
 
-        document.onmouseup = (e) => {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        };
-        document.onmousemove = e => {
-            //TODO: neue Position nur setzen, wenn this.element.clientRect innerhalb von parent.clientRectangle ist
-            this.MoveTo(e.clientX - offsetX, e.clientY - offsetY);
-        };
+    const flowchart = this.parent;
+    const selected = flowchart.GetSelectedOperators();
+    const isMultiSelect = selected.has(this);
+
+    this.isDragging = false;
+
+    // Positionen aller selektierten Operatoren merken
+    const originalPositions = new Map<FlowchartOperator, { x: number; y: number }>();
+    for (const op of selected) {
+        originalPositions.set(op, { x: op.Xpos, y: op.Ypos });
     }
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+        const dx = (moveEvent.clientX - startX) / flowchart.PositionRatio;
+        const dy = (moveEvent.clientY - startY) / flowchart.PositionRatio;
+
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+            this.isDragging = true;
+        }
+
+        if (isMultiSelect) {
+            for (const op of selected) {
+                const orig = originalPositions.get(op);
+                if (orig) {
+                    op.MoveTo(orig.x + dx, orig.y + dy);
+                }
+            }
+        } else {
+            const orig = originalPositions.get(this);
+            if (orig) {
+                this.MoveTo(orig.x + dx, orig.y + dy);
+            }
+        }
+    };
+
+    const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+}
+
+
+
     get Parent() { return this.parent };
     get Caption() { return this.caption; }
+    set Caption(value: string) {
+    this.caption = value;
+    if (this.titleSvgText) {
+        this.titleSvgText.textContent = value;
+    }
+}
 
     get InputsKVIt(){return this.Inputs.entries()}
     get OutputsKVIt(){return this.Outputs.entries()}
@@ -270,4 +393,8 @@ export abstract class FlowchartOperator {
     protected SerializeFurtherProperties(mapper:SerializeContextAndAdressMap):void{
         return;
     }
+    
 }
+
+
+

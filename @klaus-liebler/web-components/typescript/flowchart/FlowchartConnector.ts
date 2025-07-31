@@ -52,11 +52,16 @@ export abstract class FlowchartConnector {
         let spec = this.getIOSpecifics();
         let translateY = TRANSLATEY*spec.parent.childElementCount;
         this.element = <SVGGElement>Svg(spec.parent, "g", ["transform", `translate(0 ${translateY})`], [`operator-${spec.inputOrOutput}`]);
-        this.element.setAttribute("data-connector-datatype", ConnectorType[type]);
+        this.element.setAttribute("data-connector-datatype", typeof ConnectorType[type] === "string"
+  ? ConnectorType[type]
+  : `TYPE${type}`
+);
 
         let text =  <SVGTextElement>Svg(this.element, "text", ["dx",""+spec.dx, "dy", "4"], [`operator-${spec.inputOrOutput}-caption`]);
         text.textContent=caption;
         this.connectorGroup = <SVGGElement>Svg(this.element, "g", []);
+        console.log("💡 Connector CSS-Klasse:", ConnectorType[type], "für Typ:", type);
+
         this.connector = <SVGCircleElement>Svg(this.connectorGroup, "circle", ["r","4"], [`operator-${spec.inputOrOutput}-connector`, ConnectorType[type]]);
         this.snapper= <SVGCircleElement>Svg(this.connectorGroup, "circle", ["r","10"], [`operator-${spec.inputOrOutput}-snapper`]);
         

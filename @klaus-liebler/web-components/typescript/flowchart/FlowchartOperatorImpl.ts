@@ -6,6 +6,8 @@ import {ColorDomString2ColorNum, Html, InputColor, InputFloatNumber, InputIntege
 import * as Song from "./Songs";
 import { SimulationContext } from "./SimulationContext";
 import { KeyValueTuple, StringNumberTuple } from "@klaus-liebler/commons";
+import { MacroOperator } from "./MacroOperatorImpl";
+
 
 const Basic="Basic";
 const Arithmetic="Arithmetic";
@@ -55,18 +57,28 @@ export class OperatorRegistry{
     }
 
     public populateOperatorLib(parent: HTMLDivElement, onmousedownHandler: (e:MouseEvent, ti:TypeInfo)=>any) { 
-        let y = 10;
-        let top = Html(parent, "ul", [], []);
-        for (const kv of this.groupName2operatorName2Info.entries()) {
-            let groupName = kv[0];
-            Html(top, "li", [], [], groupName);
-            let ul = Html(top, "ul", [], ["nested"]);
-            for (const info of kv[1].values()) {
-                let li = Html(ul, "li", [], [], info.OperatorName);
-                li.onmousedown = (e) => onmousedownHandler(e, info);
-            }
+    let top = Html(parent, "ul", [], []);
+    for (const kv of this.groupName2operatorName2Info.entries()) {
+        let groupName = kv[0];
+        let groupLi = Html(top, "li", [], ["group-toggle"]);
+        let toggleIcon = Html(groupLi, "span", [], ["toggle-arrow"], "▶");
+        let groupLabel = Html(groupLi, "span", [], [], groupName);
+        let ul = Html(groupLi, "ul", [], ["nested"]);
+        ul.style.display = "none";
+
+        groupLi.onclick = () => {
+        const expanded = ul.style.display === "block";
+        ul.style.display = expanded ? "none" : "block";
+        toggleIcon.innerText = expanded ? "▶" : "▼";
+        };
+
+        for (const info of kv[1].values()) {
+            let li = Html(ul, "li", [], ["operator-lib-item"], info.OperatorName); // NEU
+            li.onmousedown = (e) => onmousedownHandler(e, info);
         }
     }
+}
+
 
     public static Build():OperatorRegistry{
         let r:OperatorRegistry = new OperatorRegistry();
@@ -137,7 +149,21 @@ export class OperatorRegistry{
         r.Register(58, Sound, "Sound", PositionType.Output, SingletonType.Singleton, (p, ca, ti, co)=>new Sound_Sound(p, ca, ti, co));
         
         r.Register(59, Control, "PID", PositionType.Default, SingletonType.Default, (p, ca, ti, co)=>new Control_PID(p, ca, ti, co));
-        
+        r.Register(
+    MacroOperator.GlobalTypeIndex,
+    "Custom",                 // group name (z. B. "Custom")
+    "Macro",                  // operator name (sichtbar im UI)
+    PositionType.Default,
+    SingletonType.Default,
+    (p, ca, ti, co) => new MacroOperator(p, ca, co, { operators: [], links: [] })
+);
+r.Register(1001, "Macro", "InputBlock", PositionType.Input, SingletonType.Default,
+    (p, ca, ti, co) => new Macro_InputBlockOperator(p, ca, ti, co));
+
+r.Register(1002, "Macro", "OutputBlock", PositionType.Output, SingletonType.Default,
+    (p, ca, ti, co) => new Macro_OutputBlockOperator(p, ca, ti, co));
+
+
         
         //r.Register(100, Custom, "XYZXYZBlock", PositionType.Default, SingletonType.Default, (p, ca, ti, co)=>new Custom_XYZBlock(p, ca, ti, co))
         return r;
@@ -549,11 +575,10 @@ class Input_CommonButtonOperator extends FlowchartOperator {
         super(parent, caption, ti, configurationData);
         this.O = new FlowchartOutputConnector(this, "IsPressed", 0, ConnectorType.BOOLEAN);
         this.AppendConnectors([], [this.O]);
-        this.ElementSvgG.onclick=(e)=>{
-            console.log("Input_CommonButtonOperator this.ElementSvgG.onclick");
-            parent._notifyOperatorClicked(this, e);
-            this.state=!this.state;
-        }
+this.ElementSvgG.addEventListener("click", (e) => {
+    console.log("Input_CommonButtonOperator this.ElementSvgG.onclick");
+    this.state = !this.state;
+});
     }
 
     OnSimulationStart(ctx:SimulationContext){
@@ -1342,5 +1367,40 @@ export class Control_PID extends FlowchartOperator {
         this.inputFeedback = new FlowchartInputConnector(this, "Feedback", 0, ConnectorType.FLOAT);
         this.output = new FlowchartOutputConnector(this, "Out", 1,ConnectorType.INTEGER);
         this.AppendConnectors([this.inputSetpoint, this.inputFeedback], [this.output]);
+    }
+}
+export class Macro_InputBlockOperator extends FlowchartOperator {
+    private O: FlowchartOutputConnector;
+    constructor(parent: Flowchart, caption: string, ti: TypeInfo, configurationData: KeyValueTuple[] | null) {
+        super(parent, caption, ti, configurationData);
+        this.O = new FlowchartOutputConnector(this, "Out", 0, ConnectorType.FLOAT);
+        this.AppendConnectors([], [this.O]);
+
+        this.ElementSvgG.ondblclick = (e) => {
+            this.showRenameDialog();
+};
+    }
+
+    public OnSimulationStart(ctx: SimulationContext) {
+        ctx.SetFloat(this.O, 0); // oder ein Default-Wert aus Konfiguration
+    }
+}
+export class Macro_OutputBlockOperator extends FlowchartOperator {
+    private I: FlowchartInputConnector;
+    constructor(parent: Flowchart, caption: string, ti: TypeInfo, configurationData: KeyValueTuple[] | null) {
+        super(parent, caption, ti, configurationData);
+        this.I = new FlowchartInputConnector(this, "In", 0, ConnectorType.FLOAT);
+        this.AppendConnectors([this.I], []);
+
+this.ElementSvgG.ondblclick = (e) => {
+this.showRenameDialog();
+};
+    }
+
+
+
+    public OnSimulationStep(ctx: SimulationContext) {
+        let val = ctx.GetFloat(this.I);
+        //this.box.innerText = `${val}`;
     }
 }

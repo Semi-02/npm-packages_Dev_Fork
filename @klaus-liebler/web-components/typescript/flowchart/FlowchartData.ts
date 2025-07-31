@@ -1,9 +1,27 @@
 import { KeyValueTuple } from "@klaus-liebler/commons";
+import { ConnectorType } from "./FlowchartConnector";
+
 
 
 export interface FlowchartData {
     operators: OperatorData[];
     links: LinkData[];
+
+    //NEU!!!
+    exposedInputs?: {
+        targetOperatorIndex: number;
+        targetInput: number;
+        sourceName: string;
+        sourceOutput: number;
+        connectorType?: ConnectorType;
+    }[];
+    exposedOutputs?: {
+        sourceOperatorIndex: number;
+        sourceOutput: number;
+        targetName: string;
+        targetInput: number;
+        connectorType?: ConnectorType;
+    }[];
 }
 
 export interface OperatorData {
