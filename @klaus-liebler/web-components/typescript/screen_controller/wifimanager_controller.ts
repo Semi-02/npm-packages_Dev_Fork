@@ -142,6 +142,7 @@ export class WifimanagerController extends ScreenController {
 
     private sendRequestWifiConnect(ssid: string, password: string) {
         let b = new flatbuffers.Builder(1024);
+        console.log(`sendRequestWifiConnect for ${ssid} with password ${password}`);
         b.finish(RequestWrapper.createRequestWrapper(b,Requests.RequestWifiConnect, RequestWifiConnect.createRequestWifiConnect(b, b.createString(ssid), b.createString(password))))
         this.appManagement.SendFinishedBuilder(Namespace.Value, b, 30000);
     }

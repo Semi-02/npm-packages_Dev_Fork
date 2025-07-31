@@ -202,6 +202,10 @@ overflow: auto;
   transform: translateX(0%);
 }
 
+.flowchart-operatorlibdiv.visible {
+  transform: translateX(0%);
+}
+
 .unselectable {
   user-select: none;
 }
@@ -232,6 +236,14 @@ svg.flowchart-container.debug {
   .operator-box.True {
     fill: #C59849
   }
+}
+
+.lasso-select {
+  position: absolute;
+  border: 1px dashed gray;
+  background-color: rgba(0, 120, 215, 0.15);
+  pointer-events: none;
+  z-index: 9999;
 }
 
 svg.flowchart-container {
@@ -343,9 +355,6 @@ svg.flowchart-container {
 .nested {
     margin-left: 12px;
 }
-
-
-
 
 
 
