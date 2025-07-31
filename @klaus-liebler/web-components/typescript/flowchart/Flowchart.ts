@@ -13,6 +13,7 @@ import { Namespace, RequestWrapper, RequestDebugData, RequestFbdRun, ResponseDeb
 import { Menu, MenuItem, MenuManager } from "./MenuManager";
 import { KeyValueTuple, Severity } from "@klaus-liebler/commons";
 import "../../style/flowchart.css"
+import { MacroOperator } from "./MacroOperatorImpl";
 
 //see devicemanager.hh
 const FBDSTORE_BASE_DIRECTORY = "/spiffs/fbdstore/";    
@@ -93,13 +94,17 @@ export class Flowchart {
     //Muss beim Löschen+Erzeugen von Operatoren+Links und bei Speichern von Properties zurückgesetzt werden
     private currentDebugInfo: HashAndBufAndMaps | null = null;
     private lastOutputConnectorClicked: FlowchartOutputConnector | null = null;
-    private selectedOperator: FlowchartOperator | null = null;
+    private selectedOperators: Set<FlowchartOperator> = new Set();
+
     private selectedLink: FlowchartLink | null = null;
     get SelectedLink() { return this.selectedLink };
     get Options() { return this.options; }
 
     private zoomLevel: number = 1.0;
     private scalingLayer!: SVGGElement;
+    private zoomLabel!: HTMLDivElement;
+    private selectionBoxDiv: HTMLDivElement | null = null;
+    private selectionStart: { x: number, y: number } | null = null;
 
 
     private positionRatio: number = 1;
@@ -120,6 +125,10 @@ export class Flowchart {
 
     private markerArrow: SVGPathElement|null=null;
     private markerCircle: SVGCircleElement|null=null;
+
+    private _svgCoordsFromEvent(e: MouseEvent): { x: number, y: number } {
+    return { x: e.clientX, y: e.clientY };
+}
 
     private onResponseDebugData(d: ResponseDebugData) {
         
@@ -250,7 +259,8 @@ export class Flowchart {
 
     public _notifyOperatorClicked(o: FlowchartOperator, e: MouseEvent) {
         if(this.mode!=FlowchartMode.EDIT) return;
-        this.SelectOperator(o);
+        this.SelectOperator(o, e.shiftKey);
+
     }
 
     public _notifyLinkClicked(link: FlowchartLink, e: MouseEvent) {
@@ -298,12 +308,14 @@ export class Flowchart {
         link.SetColor(this.options.defaultSelectedLinkColor);
     }
 
+
     private deleteSelectedThing(): void {
         if(this.mode!=FlowchartMode.EDIT) return;
-        if (this.selectedOperator) {
-            this.DeleteOperator(this.selectedOperator.GlobalOperatorIndex);
-        }
-        else if (this.selectedLink) {
+        if (this.selectedOperators.size > 0) {
+            for (const op of [...this.selectedOperators]) {
+                this.DeleteOperator(op.GlobalOperatorIndex);
+            }
+        }else if (this.selectedLink) {
             this.DeleteLink(this.selectedLink.GlobalLinkIndex);
         }
     }
@@ -488,13 +500,62 @@ export class Flowchart {
         }
         var mm:MenuManager=new MenuManager(
             [
-            
                 new Menu("File", [
                     new MenuItem("📂 Open (Local)", ()=>fileInput.click()),
                     new MenuItem("📂 Open (labathome)", ()=>this.getFbdFileList(FBDSTORE_BASE_DIRECTORY)),
                     new MenuItem("📂 Open Default (labathome)", ()=>this.getFbdFile(DEFAULTFBD_FBD_FILEPATH)),
                     new MenuItem("💾 Save (Local)", ()=>this.saveFbdToLocalFile()),
                     new MenuItem("💾 Save (labathome)", ()=>this.enterFilenameAndPostFbd()),
+                    new MenuItem("📦 Save as Superblock", () => this.createSuperblock()),//NEU!!
+
+                    new MenuItem("💾 Save Selection as Macro", () => this.saveSelectedAsMacro()), //NEU!!!!!!!!!!!!
+                    new MenuItem("📥 Insert Macro from File", async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".fbdmacro";
+    input.onchange = async () => {
+        if (!input.files || input.files.length === 0) return;
+
+        const file = input.files[0];
+        const content = await file.text();
+
+        try {
+            const data = JSON.parse(content) as FlowchartData;
+
+            const offsetX = 300;
+            const offsetY = 200;
+
+            // 🗺 Alte ID → Neue Operator-Instanz
+            const oldIndexToNewOperator = new Map<number, FlowchartOperator>();
+
+            // 🔁 Operatoren erzeugen
+            for (const opData of data.operators) {
+                const newOp = this.createOperatorInternal(opData.globalTypeIndex, opData.caption, opData.configurationData);
+                newOp.MoveTo(opData.posX + offsetX, opData.posY + offsetY);
+                this.operators.set(newOp.GlobalOperatorIndex, newOp);
+                oldIndexToNewOperator.set(opData.index, newOp);
+            }
+
+            // 🔁 Links erzeugen
+            for (const l of data.links) {
+                const fromOp = oldIndexToNewOperator.get(l.fromOperatorIndex);
+                const toOp = oldIndexToNewOperator.get(l.toOperatorIndex);
+                if (!fromOp || !toOp) continue;
+
+                const from = fromOp.GetOutputConnectorByIndex(l.fromOutput);
+                const to = toOp.GetInputConnectorByIndex(l.toInput);
+
+                this.createLink(null, from, to);
+            }
+
+        } catch (e) {
+            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, "Invalid macro file"));
+        }
+    };
+    input.click();
+}),
+
+
                 ]),
                 new Menu("Debug",[
                     new MenuItem("☭ Start Debug", ()=>this.postFbdFile(TEMPFBD_FBD_FILEPATH, 
@@ -545,29 +606,192 @@ export class Flowchart {
         this.links.forEach(l=>l.SetCaption(""))
         this.links.forEach(l=>l.UnsetColor())
     }
-
     public ZoomIn() {
         this.zoomLevel *= 1.1; // z.B. +10%
         this.applyZoom();
     }
+
+
     
     public ZoomOut() {
         this.zoomLevel /= 1.1; // z.B. -10%
         this.applyZoom();
     }
+
+    public GetAllOperators(): FlowchartOperator[] {
+    return Array.from(this.operators.values());
+}
+
     
     private applyZoom() {
         this.scalingLayer.setAttribute("transform", `scale(${this.zoomLevel})`);
         this.positionRatio = this.zoomLevel;
     
-        // Dynamisch SVG-Größe anpassen – damit scrollbars erscheinen!
-       /* const baseWidth = 2000;
-        const baseHeight = 1000;
+        // 💡 Größe des SVGs basierend auf Zoom-Level setzen:
+        const baseWidth = 3000;
+        const baseHeight = 2000;
         this.flowchartContainerSvgSvg.setAttribute("width", `${baseWidth * this.zoomLevel}`);
         this.flowchartContainerSvgSvg.setAttribute("height", `${baseHeight * this.zoomLevel}`);
-    */
-        }
     
+        if (this.zoomLabel) {
+            this.zoomLabel.textContent = `${Math.round(this.zoomLevel * 100)}%`;
+        }
+    }
+
+    //NEU!!!!!!!!!!!! von Kawi
+private createSuperblock(): void {
+        const name = window.prompt("Wie soll der Superblock heißen?", "MeinSuperblock");
+    if (!name) return;
+
+    const allOperators = this.GetAllOperators();
+    const internalOperatorIds = new Set(allOperators.map(op => op.GlobalOperatorIndex));
+
+    const operatorData = allOperators.map(op => ({
+        globalTypeIndex: op.TypeInfo.GlobalTypeIndex,
+        caption: op.Caption,
+        index: op.GlobalOperatorIndex,
+        posX: op.Xpos,
+        posY: op.Ypos,
+        configurationData: op.Config_Copy,
+    }));
+
+    const macroLinks = [];
+    const exposedInputs = [];
+    const exposedOutputs = [];
+
+    for (const link of this.links.values()) {
+        const fromOp = link.From.Parent;
+        const toOp = link.To.Parent;
+
+        const fromOpIndex = fromOp.GlobalOperatorIndex;
+        const toOpIndex = toOp.GlobalOperatorIndex;
+
+        const fromInside = internalOperatorIds.has(fromOpIndex);
+        const toInside = internalOperatorIds.has(toOpIndex);
+
+        if (fromInside && toInside) {
+            macroLinks.push({
+                fromOperatorIndex: fromOpIndex,
+                fromOutput: link.From.LocalConnectorIndex,
+                toOperatorIndex: toOpIndex,
+                toInput: link.To.LocalConnectorIndex,
+            });
+        }
+
+        if (!fromInside && toInside) {
+            exposedInputs.push({
+                targetOperatorIndex: toOpIndex,
+                targetInput: link.To.LocalConnectorIndex,
+                sourceName: fromOp.Caption,
+                sourceOutput: link.From.LocalConnectorIndex,
+                connectorType: link.From.Type as ConnectorType  // ✅ Cast hinzugefügt
+            });
+        }
+
+        if (fromInside && !toInside) {
+            exposedOutputs.push({
+                sourceOperatorIndex: fromOpIndex,
+                sourceOutput: link.From.LocalConnectorIndex,
+                targetName: toOp.Caption,
+                targetInput: link.To.LocalConnectorIndex,
+                connectorType: link.From.Type as ConnectorType  // ✅ Cast hinzugefügt
+            });
+        }
+    }
+
+    // 🔍 Jetzt: offene Eingänge und Ausgänge ohne Verbindung erkennen
+    for (const op of allOperators) {
+        // Eingänge prüfen
+        for (const [i, inputConnector] of op.InputsKVIt) {
+            if (inputConnector.LinksLength === 0) {
+                exposedInputs.push({
+                    targetOperatorIndex: op.GlobalOperatorIndex,
+                    targetInput: i,
+                    sourceName: "UNCONNECTED",
+                    sourceOutput: -1,
+                    connectorType: inputConnector.Type as ConnectorType  // ✅ Cast hinzugefügt
+                });
+            }
+        }
+
+        // Ausgänge prüfen
+        for (const [i, outputConnector] of op.OutputsKVIt) {
+            if (outputConnector.LinksLength === 0) {
+                exposedOutputs.push({
+                    sourceOperatorIndex: op.GlobalOperatorIndex,
+                    sourceOutput: i,
+                    targetName: "UNCONNECTED",
+                    targetInput: -1,
+                    connectorType: outputConnector.Type as ConnectorType  // ✅ Cast hinzugefügt
+                });
+            }
+        }
+    }
+
+    const macroData: FlowchartData = {
+        operators: operatorData,
+        links: macroLinks,
+        exposedInputs,
+        exposedOutputs
+    };
+
+    const macro = new MacroOperator(this, name, null, macroData);
+    macro.MoveTo(200, 100);
+    this.operators.set(macro.GlobalOperatorIndex, macro);
+}
+
+
+
+
+
+
+     //NEU!!!!!!!!!!!!
+    private async saveSelectedAsMacro() {
+    const selectedOps = [...this.selectedOperators];
+    if (selectedOps.length === 0) {
+        this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, "No blocks selected"));
+        return;
+    }
+
+    
+
+    const selectedOperatorIndexes = new Set(selectedOps.map(o => o.GlobalOperatorIndex));
+
+    const operators: OperatorData[] = selectedOps.map(o => ({
+        globalTypeIndex: o.TypeInfo.GlobalTypeIndex,
+        caption: o.Caption,
+        index: o.GlobalOperatorIndex,
+        posX: o.Xpos,
+        posY: o.Ypos,
+        configurationData: o.Config_Copy,
+    }));
+
+    const links: LinkData[] = [];
+
+    for (const l of this.links.values()) {
+        const fromIndex = l.From.Parent.GlobalOperatorIndex;
+        const toIndex = l.To.Parent.GlobalOperatorIndex;
+        if (selectedOperatorIndexes.has(fromIndex) && selectedOperatorIndexes.has(toIndex)) {
+            links.push({
+                fromOperatorIndex: fromIndex,
+                fromOutput: l.From.LocalConnectorIndex,
+                toOperatorIndex: toIndex,
+                toInput: l.To.LocalConnectorIndex
+            });
+        }
+    }
+
+    const macroData: FlowchartData = { operators, links };
+    const json = JSON.stringify(macroData);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "macro.fbdmacro";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 
     public RenderUi(subcontainer: HTMLDivElement) {
         if (!subcontainer) throw new Error("container is null");
@@ -579,38 +803,44 @@ export class Flowchart {
         let workspace = <HTMLDivElement>Html(subcontainer, "div", ["tabindex", "0"], ["develop-workspace"]);//tabindex, damit keypress-Events abgefangen werden können
         this.propertyGridHtmlDiv = <HTMLDivElement>Html(subcontainer, "div", [], ["develop-properties"]);
 
-      
-       //ZOOM hinzugefügt
         this.flowchartContainerSvgSvg = <SVGSVGElement>Svg(workspace, "svg", ["width", "100%", "height", "100%"], ["flowchart-container", "edit"]);
+
+        this.selectionBoxDiv = document.createElement("div");
+this.selectionBoxDiv.style.position = "absolute";
+this.selectionBoxDiv.style.border = "1px dashed #666";
+this.selectionBoxDiv.style.backgroundColor = "rgba(0,0,255,0.1)";
+this.selectionBoxDiv.style.pointerEvents = "none";
+this.selectionBoxDiv.style.display = "none";
+workspace.appendChild(this.selectionBoxDiv);
+
         this.scalingLayer = <SVGGElement>Svg(this.flowchartContainerSvgSvg, "g", [], ["scaling-layer"]);
           
         const gridDefs = Svg(this.scalingLayer, "defs", []);
-const pattern = Svg(gridDefs, "pattern", [
-  "id", "grid-pattern",
-  "width", "40",
-  "height", "40",
-  "patternUnits", "userSpaceOnUse"
-]);
-Svg(pattern, "path", [
-  "d", "M 40 0 L 0 0 0 40",
-  "fill", "none",
-  "stroke", "#cccccc",
-  "stroke-width", "1"
-]);
+        const pattern = Svg(gridDefs, "pattern", [
+        "id", "grid-pattern",
+        "width", "40",
+        "height", "40",
+        "patternUnits", "userSpaceOnUse"
+        ]);
+        Svg(pattern, "path", [
+        "d", "M 40 0 L 0 0 0 40",
+        "fill", "none",
+        "stroke", "#cccccc",
+        "stroke-width", "1"
+        ]);
 
-Svg(this.scalingLayer, "rect", [
-  "x", "0",
-  "y", "0",
-  "width", "10000",
-  "height", "10000",
-  "fill", "url(#grid-pattern)"
-]);
-
-
+        Svg(this.scalingLayer, "rect", [
+        "x", "0",
+        "y", "0",
+        "width", "10000",
+        "height", "10000",
+        "fill", "url(#grid-pattern)"
+        ]);
 
         // Und dann alle Layer in scalingLayer einfügen! alle Zeichenebenen in eine neue <g>-Gruppe (scalingLayer) verschoben, 
         // weil scalingLayer wird mit transform: scale(...) gezoomt.
         //Dadurch bleibt alles andere (Zoom-Buttons, UI-Menüs etc.) unberührt.
+
 
         this.linksLayer = <SVGGElement>Svg(this.scalingLayer, "g", [], ["flowchart-links-layer"]);
         this.operatorsLayer = <SVGGElement>Svg(this.scalingLayer, "g", [], ["flowchart-operators-layer", "unselectable"]);
@@ -619,16 +849,29 @@ Svg(this.scalingLayer, "rect", [
         //Button hinzugefügt !!!!!
         let zoomControls = <HTMLDivElement>Html(workspace, "div", [], ["zoom-controls"]);
         let zoomInButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "+");
+        
+        // Prozent-Anzeige links
+        this.zoomLabel = <HTMLDivElement>Html(zoomControls, "div", [], ["zoom-label"], `${Math.round(this.zoomLevel * 100)}%`);
+        this.zoomLabel.onclick = () => {
+            this.zoomLevel = 1.0;
+            this.applyZoom();
+        };
+
         let zoomOutButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "-");
-        zoomControls.style.position = "fixed";
-        zoomControls.style.top = "10px";
-        zoomControls.style.right = "10px";
-        zoomControls.style.zIndex = "1000"; 
+// Positionieren
+zoomControls.style.position = "fixed";
+zoomControls.style.top = "78px";
+zoomControls.style.right = "50px";
+zoomControls.style.zIndex = "1000";
+zoomControls.style.display = "flex";
+zoomControls.style.alignItems = "center";
+zoomControls.style.gap = "6px"; // etwas Abstand
 
         zoomInButton.onclick = () => this.ZoomIn();
         zoomOutButton.onclick = () => this.ZoomOut();
         
 
+       
         this.tempLayer.style.visibility = "hidden";//visible
         let defs = Svg(this.tempLayer, "defs", []);
         let markerArrow = Svg(defs, "marker", ["id", "marker-arrow", "markerWidth", "4", "markerHeight", "4", "refX", "1", "refY", "2", "orient", "0"]);
@@ -639,24 +882,28 @@ Svg(this.scalingLayer, "rect", [
 
         let operatorLibActivator = <SVGRectElement>Svg(this.flowchartContainerSvgSvg, "rect", ["width", "40", "height", "100%", "fill", "white", "fill-opacity", "0"]);
 
-        this.operatorLibDiv = <HTMLDivElement>Html(workspace, "div", [], ["flowchart-operatorlibdiv", "unselectable"]);
-        this.operatorLibDiv.style.display = "none";
+        this.operatorLibDiv = <HTMLDivElement>Html(subcontainer, "div", [], ["flowchart-operatorlibdiv", "unselectable"]);
+        
 
-        // Button erstellen
+             // Button erstellen
         // Links neben Workspace eine eigene Spalte für den Button
-        const leftButtonColumn = <HTMLDivElement>Html(subcontainer, "div", [], ["operator-button-column"]);
+        const buttonContainer = document.createElement("div");
+buttonContainer.classList.add("operator-button-container"); // <-- neue Klasse
         const toggleButton = document.createElement("button");
         toggleButton.innerText = "▶";
         toggleButton.classList.add("operator-toggle-button");
-        leftButtonColumn.appendChild(toggleButton);
+        buttonContainer.appendChild(toggleButton);
+        subcontainer.appendChild(buttonContainer); // <-- direkt in die skalierbare Zeichenfläche!
 
         // Öffnet die Sidebar bei Hover
-        toggleButton.addEventListener("mouseenter", () => {
-            this.operatorLibDiv.style.display = "inline";
+        buttonContainer.addEventListener("mouseenter", () => {
+            this.operatorLibDiv.classList.add("visible");
         });
         this.operatorLibDiv.addEventListener("mouseleave", () => {
-            this.operatorLibDiv.style.display = "none";
+            this.operatorLibDiv.classList.remove("visible");
         });
+
+
 
 
 
@@ -669,17 +916,105 @@ Svg(this.scalingLayer, "rect", [
         //The mouseout event triggers when the mouse pointer leaves any child elements as well the selected element.
         //The mouseleave event is only triggered when the mouse pointer leaves the selected element.
         
+     this.flowchartContainerSvgSvg.addEventListener("mousedown", (e) => {
+    if (e.button !== 0 || this.mode !== FlowchartMode.EDIT) return;
 
-        this.flowchartContainerSvgSvg.onclick = (e) => {
-            if (e.target == this.Element)//if the click is in a "free" area, then the target is the uppermost layer; the linkLayer!
-            {
-                this.unselectOperator();
-                this.unselectLink();
-            }
+    // Verhindere Lasso, wenn auf Operator geklickt wurde
+    if ((e.target as Element).closest(".operator")) return;
+
+    const svgRect = this.flowchartContainerSvgSvg.getBoundingClientRect();
+    const startX = e.clientX - svgRect.left;
+    const startY = e.clientY - svgRect.top;
+
+    this.selectionStart = { x: startX, y: startY };
+
+    this.selectionBoxDiv!.style.left = `${startX}px`;
+    this.selectionBoxDiv!.style.top = `${startY}px`;
+    this.selectionBoxDiv!.style.width = `0px`;
+    this.selectionBoxDiv!.style.height = `0px`;
+    this.selectionBoxDiv!.style.display = "block";
+});
+
+
+
+document.addEventListener("mousemove", (e) => {
+    if (!this.selectionStart) return;
+
+    const svgRect = this.flowchartContainerSvgSvg.getBoundingClientRect();
+    const x = e.clientX - svgRect.left;
+    const y = e.clientY - svgRect.top;
+
+    const left = Math.min(this.selectionStart.x, x);
+    const top = Math.min(this.selectionStart.y, y);
+    const width = Math.abs(this.selectionStart.x - x);
+    const height = Math.abs(this.selectionStart.y - y);
+
+    Object.assign(this.selectionBoxDiv!.style, {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`
+    });
+});
+
+
+document.addEventListener("mouseup", (e) => {
+    if (!this.selectionStart) return;
+    this.selectionBoxDiv!.style.display = "none";
+
+    const rect = {
+        left: Math.min(this.selectionStart.x, e.clientX),
+        top: Math.min(this.selectionStart.y, e.clientY),
+        right: Math.max(this.selectionStart.x, e.clientX),
+        bottom: Math.max(this.selectionStart.y, e.clientY),
+    };
+
+    this.selectionStart = null;
+
+    const svgRect = this.flowchartContainerSvgSvg.getBoundingClientRect();
+
+    const selectionBox = {
+        left: rect.left - svgRect.left,
+        top: rect.top - svgRect.top,
+        right: rect.right - svgRect.left,
+        bottom: rect.bottom - svgRect.top,
+    };
+
+    // Wenn Shift gedrückt: additiv
+    const additive = e.shiftKey;
+    if (!additive) this.UnselectAllOperators();
+
+    for (const op of this.operators.values()) {
+        const bbox = op.ElementSvgG.getBoundingClientRect();
+        const opBox = {
+            left: bbox.left - svgRect.left,
+            top: bbox.top - svgRect.top,
+            right: bbox.right - svgRect.left,
+            bottom: bbox.bottom - svgRect.top
+        };
+
+        const isInside = (
+            opBox.left >= selectionBox.left &&
+            opBox.right <= selectionBox.right &&
+            opBox.top >= selectionBox.top &&
+            opBox.bottom <= selectionBox.bottom
+        );
+
+        if (isInside) {
+            this.SelectOperator(op, true);
         }
+    }
+});
 
-    
-//Neuu STRG + und -
+
+       this.flowchartContainerSvgSvg.addEventListener("click", (e: MouseEvent) => {
+    if (e.target !== this.flowchartContainerSvgSvg) return;
+    this.UnselectAllOperators();
+    this.unselectLink();
+});
+
+        
+
         workspace.addEventListener("keydown", (e) => {
             if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "=")) {
                 e.preventDefault(); // 🔒 Blockiert den normalen Browser-Zoom
@@ -690,13 +1025,50 @@ Svg(this.scalingLayer, "rect", [
                     this.ZoomOut();
                 }
             }
+
+            // ENTF: Löscht selektierten Operator oder Link
+            if (e.key === "Delete") {
+                e.preventDefault();
+                this.deleteSelectedThing();
+            }
         });
+
+        this.flowchartContainerSvgSvg.addEventListener("wheel", (event) => {
+            // Optional: nur im Edit-Modus
+            if (this.mode !== FlowchartMode.EDIT) return;
+        
+            // Touchpad oder Ctrl+Mausrad
+            if (event.ctrlKey || Math.abs(event.deltaY) < 50) {
+                event.preventDefault(); // verhindert Scroll
+        
+                const zoomFactor = 1.05;
+        
+                if (event.deltaY < 0) {
+                    this.zoomLevel *= zoomFactor;
+                } else {
+                    this.zoomLevel /= zoomFactor;
+                }
+        
+                this.applyZoom();
+            }
+        }, { passive: false }); // passive: false ist wichtig für preventDefault()
         
         this.operatorRegistry.populateOperatorLib(this.operatorLibDiv, (e: MouseEvent, ti: TypeInfo) => {
             let caption = ti.OperatorName;
             let o = this.createOperatorInternal(ti.GlobalTypeIndex, caption, null);
-            let coords = EventCoordinatesInSVG(e, this.Element);
-            o.MoveTo(coords.x - 10, coords.y - 10);
+            
+            //Blöcke auf richtige Position setzen
+            const scrollDiv = this.flowchartContainerSvgSvg.parentElement!; // = develop-workspace
+            const scrollLeft = scrollDiv.scrollLeft;
+            const scrollTop = scrollDiv.scrollTop;
+            
+            const x = scrollLeft / this.zoomLevel + 100;
+            const y = scrollTop / this.zoomLevel + 100;
+            
+            o.MoveTo(x, y);
+            
+              
+            
             o.RegisterDragging(e);
             this.operators.set(o.GlobalOperatorIndex, o);
         });
@@ -776,9 +1148,8 @@ Svg(this.scalingLayer, "rect", [
         if (o === undefined) {
             throw Error("Operator to delete is undefined")
         }
-        if (this.selectedOperator == o) {
-            this.unselectOperator();
-        }
+        this.selectedOperators.delete(o); // einfach aus dem Set entfernen
+        o.ShowAsSelected(false); // Auswahl entfernen
         o.RemoveFromDOM();
         this.operators.delete(o.GlobalOperatorIndex);
         for (const outputKV of o.OutputsKVIt) {
@@ -820,42 +1191,63 @@ Svg(this.scalingLayer, "rect", [
     }
 
     private unselectOperator() {
-        if (this.flowchartCallbacks.onOperatorUnselect && !this.flowchartCallbacks.onOperatorUnselect()) return;
-        this.propertyGridHtmlDiv.innerText = ""; //clear
-        if (this.selectedOperator == null) return;
-        this.selectedOperator.ShowAsSelected(false);
-        this.selectedOperator = null;
+        this.UnselectAllOperators();
     }
 
-    public SelectOperator(operator: FlowchartOperator): void {
-        if (this.flowchartCallbacks.onOperatorSelect && !this.flowchartCallbacks.onOperatorSelect(operator.Caption)) return;
-        this.unselectLink();
-        if (this.selectedOperator != null) this.selectedOperator.ShowAsSelected(false);
-        operator.ShowAsSelected(true);
-        this.selectedOperator = operator;
-        this.propertyGridHtmlDiv.innerText = ""; //clear
-        Html(this.propertyGridHtmlDiv, "p", [], ["develop-propertygrid-head"], `Properties for ${this.selectedOperator.Caption}`);
-        let table = <HTMLTableElement>Html(this.propertyGridHtmlDiv, "table", [], ["develop-propertygrid-table"]);
-        let thead = <HTMLTableSectionElement>Html(table, "thead", [], []);
-        let tr_head = Html(thead, "tr", [], ["develop-propertygrid-tr"]);
-        Html(tr_head, "th", [], ["develop-propertygrid-th"], "Key");
-        Html(tr_head, "th", [], ["develop-propertygrid-th"], "Value");
-        let tbody = <HTMLTableSectionElement>Html(table, "tbody", [], []);
-        if (this.selectedOperator!.PopulateProperyGrid(tbody)) {
-            Html(this.propertyGridHtmlDiv, "button", [], ["develop-propertygrid-button"], `Save`).onclick = (e) => {
-                this.currentDebugInfo = null;
-                operator.SavePropertyGrid(tbody);
-            };
+    public SelectOperator(operator: FlowchartOperator, additive: boolean = false): void {
+        if (!additive) {
+            this.UnselectAllOperators();
         }
-        else {
-            this.propertyGridHtmlDiv.innerText = ""; //clear
-            Html(this.propertyGridHtmlDiv, "p", [], ["develop-propertygrid-head"], `No Properties for ${this.selectedOperator.Caption}`);
+    
+        const alreadySelected = this.selectedOperators.has(operator);
+    
+        if (additive && alreadySelected) {
+            // Toggle abwählen
+            operator.ShowAsSelected(false);
+            this.selectedOperators.delete(operator);
+        } else if (!alreadySelected) {
+            operator.ShowAsSelected(true);
+            this.selectedOperators.add(operator);
+        }
+    
+        this.updatePropertyGrid();
+    }
+
+    private updatePropertyGrid() {
+        this.propertyGridHtmlDiv.innerText = "";
+    
+        if (this.selectedOperators.size === 1) {
+            const first = [...this.selectedOperators][0];
+            Html(this.propertyGridHtmlDiv, "p", [], ["develop-propertygrid-head"], `Properties for ${first.Caption}`);
+            // ggf. weitere Inhalte...
+        } else if (this.selectedOperators.size > 1) {
+            Html(this.propertyGridHtmlDiv, "p", [], ["develop-propertygrid-head"], `${this.selectedOperators.size} blocks selected.`);
         }
     }
+    
+    
+    private UnselectAllOperators() {
+        for (const op of this.selectedOperators) {
+            op.ShowAsSelected(false);
+        }
+        this.selectedOperators.clear();
+        this.propertyGridHtmlDiv.innerText = "";
+            this.updatePropertyGrid();
+
+    }
+    
 
     // Found here : http://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
     public static _shadeColor(color: string, percent: number) {
         var f = parseInt(color.slice(1), 16), t = percent < 0 ? 0 : 255, p = percent < 0 ? percent * -1 : percent, R = f >> 16, G = f >> 8 & 0x00FF, B = f & 0x0000FF;
         return "#" + (0x1000000 + (Math.round((t - R) * p) + R) * 0x10000 + (Math.round((t - G) * p) + G) * 0x100 + (Math.round((t - B) * p) + B)).toString(16).slice(1);
     }
+    public GetSelectedOperators(): Set<FlowchartOperator> {
+    return this.selectedOperators;
+}
+public get OperatorsMap() {
+    return this.operators;
+}
+
+
 }

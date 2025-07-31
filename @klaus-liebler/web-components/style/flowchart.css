@@ -1,7 +1,8 @@
 .develop-ui {
+  position:relative;
   display: grid;
   grid-template-rows: auto 1fr;
-  grid-template-columns: auto 1fr auto; /* Neue linke Spalte */
+  grid-template-columns: 1fr auto;
   height: 100%;
 }
 
@@ -9,7 +10,7 @@
   grid-row: 1;
   grid-column-start: 1;
   grid-column-end: 3;
-  overflow: hidden;
+ overflow: hidden;
   background-color: #333;
 
   a {
@@ -21,43 +22,79 @@
     text-decoration: none;
   }
 }
-
-
 /* Neue Spalte mit Button */
 .operator-button-column {
   grid-row: 2;
   grid-column: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
   background: transparent;
+  position: relative;
 }
+.operator-button-container {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 2000;
+  pointer-events: auto;
+}
+.operator-lib-item {
+  cursor: pointer;
+  padding: 8px 16px 8px 36px;
+  border-radius: 6px;
+  margin: 4px 6px;
+  background-color: transparent;
+  font-size: 15px;
+  color: #f0f0f0;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.operator-lib-item::before {
+  content: "⮞"; /* Alternativ: "▶", "→", "⮞", "⦿" */
+  position: absolute;
+  left: 14px;
+  color: #999;
+  font-size: 12px;
+}
+b
+
+
 
 .develop-workspace {
   position: relative;
   /*to allow the operatorLib to be positioned absolute;*/
-  grid-row: 2;
-  grid-column: 2;
-  outline: none;
+  
   /*to avoid highlighting onclick because "tabindex=0" which ist for catching keydown events*/
   background-color: #ffffff;
   /*background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-*/
-background-image: none;
+ */
+ background-image: none;
 width: 100%;
   height: 100%;
 overflow: auto;
+
   }
+  .zoom-label {
+    background-color: rgb(192, 192, 192);
+    color: black;
+    border: 1px solid #ccc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
 
   .flowchart-container {
     touch-action: none;
   }
-  
+
   .operator-toggle-button {
-    position: absolute;
-    left: 210px;
-    top: 50%;
-    transform: translateY(-50%);
+
     background-color: #797a7e;
     color: white;
     border: none;
@@ -75,8 +112,12 @@ overflow: auto;
   .operator-toggle-button:hover {
     background-color: #2344aa;
   }
+  .flowchart-operator.selected {
+    outline: 2px solid orange;
+    box-shadow: 0 0 10px orange;
+  }
   
-  
+
 .develop-properties {
   grid-row: 2;
   grid-column: 2;
@@ -127,22 +168,38 @@ overflow: auto;
 .dropdown-content a:hover {
   background-color: #ddd;
 }
+.flowchart-operatorlibdiv.unselectable{
+  padding-left: 45px;
+  padding-top: 20px;
+}
+
 
 .flowchart-operatorlibdiv {
+  box-shadow: 2px 0 5px rgba(0,0,0,0.3);
   position: absolute;
   top: 0px;
-  left: 0px;
   width: 300px;
   height: 100%;
-  background-color: grey;
+  background-color: #aaa8c7;
   color: #f9f9f9;
-  overflow-y: scroll;
-  overflow-x: hidden;
-
+  overflow-y: auto;
+  z-index: 1500;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  pointer-events: auto;
   &>ul {
     margin: 0;
     padding: 0;
   }
+}
+.flowchart-operatorlibdiv ul {
+  list-style: none; /* ⛔ kein Punkt vom Browser */
+  padding-left: 0;  /* ⛔ kein automatischer Einzug */
+  margin: 0;
+}
+
+.flowchart-operatorlibdiv.visible {
+  transform: translateX(0%);
 }
 
 .unselectable {
@@ -173,7 +230,7 @@ svg.flowchart-container.debug {
     fill: #7a7979;
   }
   .operator-box.True {
-    fill: rgb(55, 68, 253)
+    fill: #C59849
   }
 }
 
@@ -185,7 +242,6 @@ svg.flowchart-container {
     }
   }
 
-  /*opertoren füllung*/
   .operator-box {
     stroke: #ccc;
     stroke-width: 1;
@@ -204,7 +260,6 @@ svg.flowchart-container {
     font-size: 8px;
   }
 
-  /*Punkte an den opertoren*/
   .operator-input-connector,
   .operator-output-connector {
     stroke: black;
@@ -234,7 +289,6 @@ svg.flowchart-container {
     font: 12px sans-serif;
     text-anchor: end;
   }
-
   .zoom-controls button {
     background-color: white;
     border: 1px solid black;
@@ -244,7 +298,8 @@ svg.flowchart-container {
     height: 40px;
     cursor: pointer;
   }
-  
+
+
   .tools-container {
     fill: #ccc;
     stroke: #ccc;
@@ -260,4 +315,38 @@ svg.flowchart-container {
   .tool-caption {
     font: 12px sans-serif;
   }
+
+.group-toggle {
+  padding: 10px 16px;
+  font-weight: bold;
+  font-size: 16px;
+  background-color: #646464;
+  color: white;
+  border-top: 1px solid #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-toggle:hover {
+  background-color: #777;
+}
+
+
+.group-toggle {
+    margin-top: 12px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.nested {
+    margin-left: 12px;
+}
+
+
+
+
+
+
 }
