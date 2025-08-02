@@ -26,10 +26,24 @@ export abstract class FlowchartConnector {
     protected connector:SVGElement;
     protected connectorGroup:SVGGElement;
 
+    private isTypeDynamic = false;
+
+
     protected  links = new Map<number, FlowchartLink>();
     public HasLink = (globalLinkIndex: number) => this.links.has(globalLinkIndex);
     public AddLink = (link: FlowchartLink) => this.links.set(link.GlobalLinkIndex, link);
-    public RemoveLink = (link: FlowchartLink) => this.links.delete(link.GlobalLinkIndex);
+
+
+    public RemoveLink = (link: FlowchartLink) => {
+    this.links.delete(link.GlobalLinkIndex);
+
+    // 🔄 Wenn keine Verbindungen mehr da sind, und Typ war dynamisch → zurücksetzen
+    if (this.links.size === 0 && this.isTypeDynamic) {
+        this.ResetType();
+    }
+}
+
+
     get LinksLength() { return this.links.size};
     public GetLinksCopy(): FlowchartLink[] {
         return Array.from(this.links.values());
@@ -88,13 +102,26 @@ export abstract class FlowchartConnector {
 
     // Setzt den Typ des Connectors, wenn er noch nicht gesetzt ist
 public SetType(newType: ConnectorType) {
-    if (this.type !== null) return; // Nur wenn unbestimmt
+    if (this.type !== null) return;
     this.type = newType;
+    this.isTypeDynamic = true;
 
-    // CSS aktualisieren
-    this.connector.classList.add(ConnectorType[newType]);
-    this.element.setAttribute("data-connector-datatype", ConnectorType[newType]);
+    const cssClass = ConnectorType[newType];
+    this.connector.classList.add(cssClass);
+    this.element.setAttribute("data-connector-datatype", cssClass);
 }
+
+public ResetType() {
+    if (!this.isTypeDynamic) return;
+    
+    const cssClass = ConnectorType[this.type!];
+    this.connector.classList.remove(cssClass);
+    this.element.setAttribute("data-connector-datatype", "None");
+    
+    this.type = null;
+    this.isTypeDynamic = false;
+}
+
 
     public GetLinkpoint(): Location2D {
         let flowchart = this.Parent.Parent;
