@@ -10,6 +10,14 @@ export class FlowchartLink {
     private captionPath: SVGTextPathElement;
     constructor(private parent: Flowchart, caption: string, private color: string, private from: FlowchartOutputConnector, private to: FlowchartInputConnector) {
         this.index = FlowchartLink.MAX_INDEX++;
+
+            // Typangleichung: falls einer von beiden "neutral" ist (null), Typ vom anderen übernehmen
+    if (this.from.Type === null && this.to.Type !== null) {
+        this.from.SetType(this.to.Type);
+    } else if (this.to.Type === null && this.from.Type !== null) {
+        this.to.SetType(this.from.Type);
+    }
+
         this.element = <SVGPathElement>Svg(parent.LinkLayer, "path", ["stroke-width", "" + this.parent.Options.linkWidth, "fill", "none", "id", "LINK" + this.index]);
         this.RefreshPosition();
         this.UnsetColor();

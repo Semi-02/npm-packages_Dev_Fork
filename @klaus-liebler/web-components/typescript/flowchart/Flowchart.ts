@@ -250,7 +250,9 @@ export class Flowchart {
         if(this.mode!=FlowchartMode.EDIT) return;
         if (this.lastOutputConnectorClicked == null) return;
         if (!this.options.multipleLinksOnInput && c.LinksLength > 0) return;
-        if (this.lastOutputConnectorClicked.Type == c.Type) {
+        if (    this.lastOutputConnectorClicked.Type === c.Type ||
+    this.lastOutputConnectorClicked.Type === null ||
+    c.Type === null) {
             this.createLink(null, this.lastOutputConnectorClicked, c);
         }
         this.unsetTemporaryLink();

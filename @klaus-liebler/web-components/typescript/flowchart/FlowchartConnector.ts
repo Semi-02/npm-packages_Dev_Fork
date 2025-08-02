@@ -83,8 +83,18 @@ export abstract class FlowchartConnector {
     }
     get Parent() { return this.parent; }
     get Caption() { return this.caption; }
-    get Type() { return this.type; }
+    get Type(): ConnectorType | null { return this.type; }
 
+
+    // Setzt den Typ des Connectors, wenn er noch nicht gesetzt ist
+public SetType(newType: ConnectorType) {
+    if (this.type !== null) return; // Nur wenn unbestimmt
+    this.type = newType;
+
+    // CSS aktualisieren
+    this.connector.classList.add(ConnectorType[newType]);
+    this.element.setAttribute("data-connector-datatype", ConnectorType[newType]);
+}
 
     public GetLinkpoint(): Location2D {
         let flowchart = this.Parent.Parent;
@@ -98,7 +108,7 @@ export abstract class FlowchartConnector {
 }
 
 export class FlowchartInputConnector extends FlowchartConnector {
-    constructor (parent: FlowchartOperator, caption: string, localIndex:number, type:ConnectorType) {
+    constructor (parent: FlowchartOperator, caption: string, localIndex:number, type:ConnectorType | null) {
         super(parent, caption, localIndex, type);
         
         this.connectorGroup.onmouseup = (e) => {
