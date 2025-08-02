@@ -2,39 +2,18 @@
 @import "./dialog.css";
 @import "./loader.css";
 
+
 :root {
-  --celadon: #A6D49F;
-  --olivine: #9CB380;
-  --caput: #522A27;
-  --sinopia: #C73E1D;
-  --satin: #C59849;
-  --timberwolf: #EADEDA;
-  --cinereous: #998888;
-  --silver: #BFB8AD;
-  --white: #ffffff;
-  --black: #000000;
-   --color-primary: #A6D49F; /* Celadon */
-  --color-secondary: #9CB380; /* Olivine */
-  --color-accent: #C73E1D; /* Sinopia */
-  --color-bg: #EADEDA; /* Timberwolf */
-  --color-panel: #ffffff; /* Weiß für Kontrast */
-  --color-shadow: rgba(0, 0, 0, 0.1);
-  --color-border: #ccc;
-  --color-input-bg: #f9f9f9;
-  --color-input-border: #ccc;
-  --color-button: #998888; /* Cinereous */
-  --color-button-hover: #BFB8AD; /* Silver */
-  --radius: 10px;
-  --shadow: 0 4px 8px var(--color-shadow);
-  --font-main: "Dosis", sans-serif;
-  --accent: #b4e0b4;
-  --neutral: #dcdcd5;
-  --highlight: #a6d49f;
-  --error: #ff6f61;
-  --bg: #fefefe;
-  --border: #ccc;
-  --text: #333;
+  --main-white-color: #f2f2f2;
+  --main-black-color: black;
+  --main-purple-color: #9e89b8;
+  --blue-3: hsl(211, 57%, 25%);
+  --blue-4: hsl(211, 39%, 44%);
+  --blue-5: hsl(211, 51%, 65%);
+  --blue-7: hsl(211, 90%, 93%);
+  --blue-rich: hsl(211, 65%, 48%);
 }
+
 * {
   box-sizing: border-box;
 }
@@ -178,6 +157,32 @@
 }
 
 
+#snackbar {
+  visibility: hidden;
+  /* Hidden by default. Visible on click */
+  min-width: 250px;
+  /* Set a default minimum width */
+  margin-left: -125px;
+  /* Divide value of min-width by 2 */
+  background-color: #4e4d4dcd;
+  /* Black background color */
+  color: #fff;
+  /* White text color */
+  text-align: center;
+  /* Centered text */
+  border-radius: 2px;
+  /* Rounded borders */
+  padding: 16px;
+  /* Padding */
+  position: fixed;
+  /* Sit on top of the screen */
+  z-index: 1;
+  /* Add a z-index if needed */
+  left: 50%;
+  /* Center the snackbar */
+  bottom: 30px;
+  /* 30px from the bottom */
+}
 
 
 @keyframes fadein {
@@ -205,6 +210,13 @@
   }
 }
 
+input:invalid {
+  border: 2px dashed red;
+}
+
+input:invalid:required {
+  background-image: linear-gradient(to right, pink, lightgreen);
+}
 
 .info {
   color: rgb(102, 249, 102);
@@ -228,12 +240,33 @@ svg.iconsize {
 }
 
 
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 25px 0;
+  min-width: 400px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+td,
+th {
+  border-top: 1px solid #555555;
+  text-align: left;
+  padding: 8px;
+}
 
 td.minwidth {
   width: 1%;
   white-space: nowrap;
 }
 
+tr:nth-child(odd) {
+  background-color: #dddddd;
+}
+
+tr:nth-child(even) {
+  background-color: #ffffff;
+}
 
 td>figure {
   margin: 0px;
@@ -320,210 +353,17 @@ button.active{
   }
 }
 
-
-.accordion {
-  background: var(--color-panel);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
+div.accordion {
+  width:100%;
+  border: #555555 solid 1px;
+  margin-bottom: 10px;
+  >button {
+    display: flex; width:100%; align-items:center;
+    >input{
+      height:30px;
+    }
+  }
+  >div>table{
+    margin: 0px;
+  }
 }
-
-.accordion button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #aaa8c7;
-  color: white;
-  border: none;
-  padding: 15px 20px;
-  width: 100%;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.accordion button:hover {
-  background-color: #d2d2db;
-}
-
-.accordion button input[type="button"] {
-  margin-left: 10px;
-  background-color: #e4e3ef;
-  color: rgb(0, 0, 0);
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.accordion button input[type="button"]:hover {
-  background-color:#8e8cad;
-}
-
-.accordion table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--color-input-bg);
-}
-
-.accordion thead {
-  background:#efefef;
-  color: #000;
-}
-
-.accordion th, .accordion td {
-  padding: 12px 15px;
-  border-bottom: 1px solid var(--color-border);
-  text-align: left;
-}
-
-.accordion td:first-child {
-  width: 200px;
-  font-weight: bold;
-}
-
-.accordion input[type="text"],
-.accordion select {
-  width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid var(--color-input-border);
-  font-size: 14px;
-}
-
-.accordion input[type="checkbox"] {
-  transform: scale(1.2);
-}
-
-
-body {
-  font: 16px/1.5 "Dosis", sans-serif;
-  margin: 0;
-  padding: 0;
-  color: var(--black);
-}
-
-header, footer {
-  background-color: var(--satin);
-  padding: 10px;
-  text-align: center;
-}
-
-nav {
-  background-color: #efefef;
-  height: 100%;
-  padding: 10px 0;
-}
-
-nav ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-nav ul li a {
-  display: block;
-  padding: 10px 16px;
-  color: var(--white);
-  text-decoration: none;
-  border-bottom: 1px solid var(--silver);
-  transition: color 0.3s ease;
-
-        
-        transition: color .2s ease-out;
-        background-color: #efefef;
-}
-
-nav ul li a:hover {
-  background-color: #C59849;
-}
-
-main {
-  background-color: var(--white);
-}
-
-h1 {
-  font-size: 24px;
-  border-bottom: 3px solid #dcdcdc;;
-  padding-bottom: 6px;
-  color: var(--caput);
-}
-
-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  margin: 20px 0;
-  min-width: 400px;
-  background-color:#efefef;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
-}
-
-thead {
-  
-  color: var(--black);
-  font-weight: bold;
-}
-
-td, th {
-  padding: 14px;
-  border-bottom: 1px solid var(--cinereous);
-  text-align: left;
-  vertical-align: middle;
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-input[type="button"] {
-  background-color: #aaa8c7;;
-  color: var(--white);
-  padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-input[type="button"]:hover {
-  background-color:  #87869d;;
-  transform: translateY(-1px);
-  cursor: pointer;
-}
-
-.buttons {
-  display: flex;
-  gap: 15px;
-  margin: 10px 0;
-}
-
-#snackbar {
-  visibility: hidden;
-  min-width: 250px;
-  margin-left: -125px;
-  background-color: var(--caput);
-  color: var(--white);
-  text-align: center;
-  border-radius: 4px;
-  padding: 16px;
-  position: fixed;
-  z-index: 1;
-  left: 50%;
-  bottom: 30px;
-}
-
-input:invalid {
-  border: 2px dashed var(--sinopia);
-}
-
-input:invalid:required {
-  background-image: linear-gradient(to right, var(--sinopia), var(--celadon));
-}
-

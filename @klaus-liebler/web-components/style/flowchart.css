@@ -10,7 +10,7 @@
   grid-row: 1;
   grid-column-start: 1;
   grid-column-end: 3;
- overflow: hidden;
+  overflow: hidden;
   background-color: #333;
 
   a {
@@ -40,27 +40,23 @@
   z-index: 2000;
   pointer-events: auto;
 }
+
+/*liste links*/
 .operator-lib-item {
   cursor: pointer;
-  padding: 8px 16px 8px 36px;
-  border-radius: 6px;
-  margin: 4px 6px;
-  background-color: transparent;
-  font-size: 15px;
-  color: #f0f0f0;
-  position: relative;
-  transition: all 0.2s ease;
+  
+  border-radius: 4px;
+  transition: background-color 0.2s;
+ 
+  padding-left: 15px;
 }
 
-.operator-lib-item::before {
-  content: "⮞"; /* Alternativ: "▶", "→", "⮞", "⦿" */
-  position: absolute;
-  left: 14px;
-  color: #999;
-  font-size: 12px;
-}
-b
 
+
+.operator-lib-item:hover {
+  background-color: #4a90e2; /* z.B. hellblau */
+  color: white;
+}
 
 
 .develop-workspace {
@@ -169,37 +165,26 @@ overflow: auto;
   background-color: #ddd;
 }
 .flowchart-operatorlibdiv.unselectable{
-  padding-left: 45px;
+  padding-left: 25px;
   padding-top: 20px;
 }
-
-
 .flowchart-operatorlibdiv {
-  box-shadow: 2px 0 5px rgba(0,0,0,0.3);
   position: absolute;
   top: 0px;
   width: 300px;
   height: 100%;
-  background-color: #aaa8c7;
+  background-color: grey;
   color: #f9f9f9;
   overflow-y: auto;
   z-index: 1500;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
   pointer-events: auto;
+
   &>ul {
     margin: 0;
     padding: 0;
   }
-}
-.flowchart-operatorlibdiv ul {
-  list-style: none; /* ⛔ kein Punkt vom Browser */
-  padding-left: 0;  /* ⛔ kein automatischer Einzug */
-  margin: 0;
-}
-
-.flowchart-operatorlibdiv.visible {
-  transform: translateX(0%);
 }
 
 .flowchart-operatorlibdiv.visible {
@@ -234,7 +219,7 @@ svg.flowchart-container.debug {
     fill: #7a7979;
   }
   .operator-box.True {
-    fill: #C59849
+    fill: rgb(55, 68, 253)
   }
 }
 
@@ -328,32 +313,34 @@ svg.flowchart-container {
     font: 12px sans-serif;
   }
 
+/* Style für Gruppenüberschrift (z.B. ▶ Arithmetic) */
 .group-toggle {
-  padding: 10px 16px;
-  font-weight: bold;
-  font-size: 16px;
-  background-color: #646464;
-  color: white;
-  border-top: 1px solid #666;
   cursor: pointer;
+  font-weight: bold;
+  padding: 2px 4px;
+  margin-left: 10px; /* Abstand nach rechts */
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
+/* Eingeklappt/ausgeklapptes Untermenü */
+.group-toggle > ul {
+  margin-left: 20px; /* weniger Abstand beim Einrücken der Kinder */
+  padding-left: 10px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+
 .group-toggle:hover {
-  background-color: #777;
+  background-color: #666;
 }
 
-
-.group-toggle {
-    margin-top: 12px;
-    font-weight: bold;
-    color: #ffffff;
-}
-
-.nested {
-    margin-left: 12px;
+.toggle-arrow {
+  font-size: 12px;
+  width: 12px;
+  display: inline-block;
 }
 
 

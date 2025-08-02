@@ -152,27 +152,17 @@ export class HeaterExperimentController extends ScreenController {
           </table>
     `
 
-private setMyBubble(range: HTMLInputElement) {
-  const bubble = <HTMLOutputElement>range.nextElementSibling;
-  const val = range.valueAsNumber;
-  const min = Number(range.min) || 0;
-  const max = Number(range.max) || 100;
+private setMyBubble(range: HTMLInputElement){
+    let bubble = <HTMLOutputElement>range.nextElementSibling;
+    let val = range.valueAsNumber;
+    let min = range.min ? parseInt(range.min) : 0;
+    let max = range.max ? parseInt(range.max) : 100;
+    let newVal = ((val - min) * 100) / (max - min);
+    bubble.innerHTML = "" + val;
 
-  bubble.innerHTML = val.toString();
-
-  const percent = (val - min) / (max - min);
-
-  // Position berechnen basierend auf tatsächlicher Breite
-  const sliderWidth = range.offsetWidth;
-  const bubbleWidth = bubble.offsetWidth;
-  const thumbSize = 20; // passend zu deinem CSS
-
-  const offset = percent * (sliderWidth - thumbSize) + (thumbSize / 2) - (bubbleWidth / 2);
-
-  bubble.style.left = `${offset}px`;
-}
-
-
+    // Sorta magic numbers based on size of the native UI thumb
+    bubble.style.left = `calc(${newVal}% + (${8 - newVal * 0.15}px))`;
+};
     
 
 public OnFirstStart(): void {
