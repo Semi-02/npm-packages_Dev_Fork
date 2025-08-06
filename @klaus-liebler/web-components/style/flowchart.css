@@ -165,7 +165,7 @@ overflow: auto;
   background-color: #ddd;
 }
 .flowchart-operatorlibdiv.unselectable{
-  padding-left: 45px;
+  padding-left: 25px;
   padding-top: 20px;
 }
 .flowchart-operatorlibdiv {
@@ -180,15 +180,6 @@ overflow: auto;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
   pointer-events: auto;
-}
-.flowchart-operatorlibdiv ul {
-  list-style: none; /* ⛔ kein Punkt vom Browser */
-  padding-left: 0;  /* ⛔ kein automatischer Einzug */
-  margin: 0;
-}
-
-.flowchart-operatorlibdiv.visible {
-  transform: translateX(0%);
 }
 
 .unselectable {
