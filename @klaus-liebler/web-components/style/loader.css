@@ -10,19 +10,18 @@
 }
 
 .modal {
-  display: none; /* Hidden by default flex none */
-  position: fixed; /* Stay in place */
-  z-index: 1000; /* Sit on top */
+  display: none; 
+  position: fixed;
+  z-index: 1000; 
   align-items: center;
   justify-content: center;
   left: 0;
   top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: hidden; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
+  width: 100%; 
+  height: 100%;
+  overflow: hidden; 
+  background-color: rgb(0,0,0); 
+  background-color: rgba(0,0,0,0.4); }
 
 @keyframes rotation {
   0% {
