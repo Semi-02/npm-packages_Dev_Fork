@@ -187,39 +187,36 @@ public stopSfc(): void {
   this.appManagement.ShowDialog(dialog);
 }
 
-public createNewSFC(): void {
-  const dialog = new OkCancelDialog(
-    Severity.WARN,
-    "Möchten Sie eine neue SFC erstellen? Ungespeicherte Änderungen gehen verloren.",
-    (ok) => {
-      if (ok) {
-        // TODO: Implementiere SFC-Stop Request an Server
-        this.appManagement.ShowSnackbar(Severity.INFO, "SFC create - Noch nicht implementiert");
-        console.log("SFC create Funktionalität muss noch implementiert werden");
-      }
-    }
-  );
-  this.appManagement.ShowDialog(dialog);
+public async createNewSFC(): Promise<void> {
+  try {
+    await this.loadSfcFile("/spiffs/newFile.json");
+  } catch (error) {
+    this.appManagement.ShowDialog(
+      new OkDialog(Severity.ERROR, `Fehler beim Laden der Vorlage: ${error.message}`)
+    );
+  }
 }
 
 public showTutorial(): void {
   const tutorialContent = `
+
 # Sequential Function Chart Tutorial
 
-## Introduction
+##### Introduction
 This tool allows you to create and edit Sequential Function Charts (SFC) which are used for programming sequential control systems.
 
-## Basic Functions:
+##### Basic Functions:
 1. **Create Steps**: Use the + buttons to add steps above or below existing ones
 2. **Add Actions**: Click the + button in action boxes to add new actions
 3. **Edit Transitions**: Click on transition conditions to edit them
 4. **Manage Booleans**: Add and edit boolean variables in the right panel
 
-## Menu Functions:
+##### Menu Functions:
 - **File**: Create new SFCs, open from PC/server, save to PC/server
 - **Run**: Execute the SFC, stop execution, save as default
 
-For more information, visit our documentation website.
+#####For more information, visit our documentation website.
+
   `;
 
   const dialog = new OkCancelDialog(
