@@ -496,6 +496,76 @@ export abstract class BaseAction {
       }
     };
 
+    // NEU: Container für vertikale Anordnung der Pfeile
+    const moveButtonsContainer = Html(tdInsert, "div", [], ["move-buttons-container"]);
+    
+    // Auf-Button mit ^ Symbol
+    const upBtn = Html(moveButtonsContainer, "button", [], ["action-move-btn", "action-move-up"], "▲") as HTMLButtonElement;
+    
+    // Ab-Button mit v Symbol
+    const downBtn = Html(moveButtonsContainer, "button", [], ["action-move-btn", "action-move-down"], "▼") as HTMLButtonElement;
+    
+    // Rest des Styling-Codes und der Event-Handler bleibt gleich...
+
+    // Logik zum Aktivieren/Deaktivieren der Buttons basierend auf Position
+    if (step) {
+      const actionIndex = step.actions.indexOf(this);
+      
+      // Deaktiviere "nach oben"-Button, wenn es die erste Aktion ist
+      if (actionIndex === 0) {
+        upBtn.disabled = true;
+        upBtn.style.opacity = "0.3";
+        upBtn.style.cursor = "not-allowed";
+      } 
+      
+      // Deaktiviere "nach unten"-Button, wenn es die letzte Aktion ist
+      if (actionIndex === step.actions.length - 1) {
+        downBtn.disabled = true;
+        downBtn.style.opacity = "0.3";
+        downBtn.style.cursor = "not-allowed";
+      }
+
+      // Eventhandler für "nach oben" verschieben
+      upBtn.onclick = () => {
+        if (actionIndex > 0) {
+          // Tausche mit der vorherigen Aktion
+          [step.actions[actionIndex], step.actions[actionIndex - 1]] = 
+          [step.actions[actionIndex - 1], step.actions[actionIndex]];
+          
+          // UI aktualisieren
+          const tableBody = container.closest("tbody");
+          if (tableBody) {
+            tableBody.innerHTML = "";
+            step.actions.forEach(a => a.Render(tableBody as HTMLElement, step, manager));
+          }
+          
+          if (manager && typeof manager.notifyChange === "function") {
+            manager.notifyChange();
+          }
+        }
+      };
+
+      // Eventhandler für "nach unten" verschieben
+      downBtn.onclick = () => {
+        if (actionIndex < step.actions.length - 1) {
+          // Tausche mit der nächsten Aktion
+          [step.actions[actionIndex], step.actions[actionIndex + 1]] = 
+          [step.actions[actionIndex + 1], step.actions[actionIndex]];
+          
+          // UI aktualisieren
+          const tableBody = container.closest("tbody");
+          if (tableBody) {
+            tableBody.innerHTML = "";
+            step.actions.forEach(a => a.Render(tableBody as HTMLElement, step, manager));
+          }
+          
+          if (manager && typeof manager.notifyChange === "function") {
+            manager.notifyChange();
+          }
+        }
+      };
+    }
+
     // Dropdown für Action-Typen
     const tdType = Html(actionRow, "td", [], []);
     const select = Html(tdType, "select", [], ["action-type-select"]) as HTMLSelectElement;

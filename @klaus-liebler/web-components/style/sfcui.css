@@ -250,6 +250,20 @@
   font-size: 0.9em;
 }
 
+/* Platz für die Buttons in der ersten Spalte */
+.actions-table td:first-child {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  white-space: nowrap;
+  min-width: 50px;
+}
+
+/* Zusätzlicher Abstand zwischen Plus-Button und Move-Buttons */
+.action-insert-btn {
+  margin-right: 4px !important;
+}
+
 .step-lower-part {
   width: 100%;
   height: 40%;
@@ -478,6 +492,49 @@
   padding: 2px 0 2px 2px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 
+}
+
+/* Container für die Move-Buttons */
+.move-buttons-container {
+  display: flex;
+  flex-direction: column;
+  margin-left: 4px;
+}
+
+/* Gemeinsame Stile für die Move-Buttons */
+.action-move-btn {
+  width: 18px !important;
+  height: 18px !important;
+  padding: 0 !important;
+  margin: 1px 0 !important;
+  line-height: 1 !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  border-radius: 3px !important;
+  transition: opacity 0.2s !important;
+}
+
+.action-move-btn:hover:not(:disabled) {
+  opacity: 1 !important;
+}
+
+/* Spezifische Stile für die Buttons */
+.action-move-up {
+  background: #3498db !important;
+}
+
+.action-move-down {
+  background: #2980b9 !important;
+}
+
+/* Deaktivierte Buttons */
+.action-move-btn:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
 }
 
 
