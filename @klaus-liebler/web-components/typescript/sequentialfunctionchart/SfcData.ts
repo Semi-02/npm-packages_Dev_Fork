@@ -248,7 +248,7 @@ export class SfcStep {
     return stepContainer;
   }
 
-  private renderUpperPart(container: HTMLElement, renderActions?: boolean,manager?:any): void {
+  private renderUpperPart(container: HTMLElement, renderActions?: boolean, manager?:any): void {
     const upperPart = Html(container, "div", [], ["step-upper-part"]);
 
     const nameArea = Html(upperPart, "div", [], ["step-name"]);
@@ -287,6 +287,36 @@ export class SfcStep {
       const actionsArea = Html(upperPart, "div", [], ["step-actions"]);
       this.addHoverButtonToStepActions(actionsArea,manager);
       this.renderActionsTable(actionsArea,manager);
+
+      // --- Resize-Handle hinzufügen ---
+      const resizeHandle = Html(actionsArea, "div", [], ["resize-handle"]);
+      let isResizing = false;
+      let startY = 0;
+      let startHeight = 0;
+
+      resizeHandle.addEventListener("mousedown", (e: MouseEvent) => {
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = actionsArea.offsetHeight;
+        document.body.style.userSelect = "none";
+        e.preventDefault();
+      });
+
+      document.addEventListener("mousemove", (e: MouseEvent) => {
+        if (!isResizing) return;
+        const dy = e.clientY - startY;
+        let newHeight = startHeight + dy;
+        if (newHeight < 60) newHeight = 60;
+        actionsArea.style.height = newHeight + "px";
+      });
+
+      document.addEventListener("mouseup", () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.userSelect = "";
+        }
+      });
+      // --- Ende Resize-Handle ---
     }
   }
 

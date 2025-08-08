@@ -54,6 +54,9 @@
 
 .step-actions {
   position: relative; /* Ensure the button is positioned relative to this container */
+  resize: none; /* Standardmäßig deaktiviert, wir machen es per JS */
+  min-height: 60px;
+  min-width: 120px;
 }
 
 .grid-container {
@@ -225,7 +228,7 @@
   padding: 0;
   overflow-y: auto;
   height: 150px;         /* neu: immer gleich hoch */
-  max-height: 150px;
+  max-height: 450px;
   box-sizing: border-box;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Added shadow effect */
 }
@@ -503,12 +506,12 @@
 
 /* Gemeinsame Stile für die Move-Buttons */
 .action-move-btn {
-  width: 18px !important;
-  height: 18px !important;
+  width: 15.0px !important;      /* 25% kleiner als 18px */
+  height: 15.0px !important;
   padding: 0 !important;
   margin: 1px 0 !important;
   line-height: 1 !important;
-  font-size: 12px !important;
+  font-size: 10px !important;     /* 25% kleiner als 12px */
   font-weight: bold !important;
   display: flex !important;
   align-items: center !important;
@@ -516,10 +519,12 @@
   border: none !important;
   border-radius: 3px !important;
   transition: opacity 0.2s !important;
+  cursor: pointer !important;    /* Immer Finger-Cursor */
 }
 
 .action-move-btn:hover:not(:disabled) {
   opacity: 1 !important;
+  cursor: pointer !important;    /* Finger-Cursor beim Hover */
 }
 
 /* Spezifische Stile für die Buttons */
@@ -535,6 +540,30 @@
 .action-move-btn:disabled {
   opacity: 0.3 !important;
   cursor: not-allowed !important;
+}
+
+.step-actions .resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  cursor: se-resize;
+  z-index: 10;
+  border-radius: 3px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.step-actions .resize-handle::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url("data:image/svg+xml;utf8,<svg width='16' height='16' xmlns='http://www.w3.org/2000/svg'><line x1='0' y1='16' x2='16' y2='0' stroke='%23999' stroke-width='2'/><line x1='4' y1='16' x2='16' y2='4' stroke='%23999' stroke-width='1'/></svg>") no-repeat center center;
+  opacity: 0.6;
 }
 
 
