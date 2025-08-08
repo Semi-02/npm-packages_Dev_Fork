@@ -480,6 +480,9 @@ export class Flowchart {
 
             this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
             if (onSuccessAction) onSuccessAction(fullPath);
+            const macroName = fullPath.split("/").pop()?.replace(".json", "");
+            if (macroName) this.addCustomBlockName(macroName);
+            
 
         } catch (error) {
             console.error('There was a problem with the json post operation:', error);
@@ -487,6 +490,63 @@ export class Flowchart {
             if (onFailAction) onFailAction(fullPath);
         }
     }
+    
+private addCustomBlockName(name: string) {
+    let customBlocks = JSON.parse(localStorage.getItem("customBlocks") || "[]");
+    if (!customBlocks.includes(name)) {
+        customBlocks.push(name);
+        localStorage.setItem("customBlocks", JSON.stringify(customBlocks));
+    }
+    this.updateCustomBlocksMenu();
+}
+
+private updateCustomBlocksMenu() {
+    const customBlocks = JSON.parse(localStorage.getItem("customBlocks") || "[]");
+    const top = this.operatorLibDiv.querySelector("ul");
+    let groupLi = top?.querySelector(".custom-blocks-group") as HTMLLIElement;
+    if (!groupLi) {
+        groupLi = document.createElement("li");
+        groupLi.classList.add("group-toggle", "custom-blocks-group");
+        const toggleIcon = document.createElement("span");
+        toggleIcon.classList.add("toggle-arrow");
+        toggleIcon.innerText = "▶";
+        const groupLabel = document.createElement("span");
+        groupLabel.innerText = "CustomBlocks";
+        const ul = document.createElement("ul");
+        ul.classList.add("nested");
+        ul.style.display = "none";
+        groupLi.appendChild(toggleIcon);
+        groupLi.appendChild(groupLabel);
+        groupLi.appendChild(ul);
+        top?.appendChild(groupLi);
+
+        groupLi.onclick = () => {
+            const expanded = ul.style.display === "block";
+            ul.style.display = expanded ? "none" : "block";
+            toggleIcon.innerText = expanded ? "▶" : "▼";
+        };
+    }
+    const ul = groupLi.querySelector("ul")!;
+    ul.innerHTML = "";
+    customBlocks.forEach(name => {
+        const li = document.createElement("li");
+        li.classList.add("operator-lib-item");
+        li.innerText = name;
+        li.onmousedown = async (e) => {
+            const response = await fetch(FBDMACROSTORE_BASE_DIRECTORY + name + ".json");
+            if (!response.ok) {
+                alert("Datei nicht gefunden!");
+                return;
+            }
+            const macroJson = await response.text();
+            const macroData = JSON.parse(macroJson);
+            const macroOp = new MacroOperator(this, macroData.name || name, null, macroData);
+            macroOp.MoveTo(200, 100);
+            this.operators.set(macroOp.GlobalOperatorIndex, macroOp);
+        };
+        ul.appendChild(li);
+    });
+}
     private async getFbdFile(path: string) {
         try {
             const response = await fetch(this.options.httpServerBasePath + path);
@@ -1141,6 +1201,8 @@ export class Flowchart {
             this.operators.set(o.GlobalOperatorIndex, o);
         });
 
+        this.updateCustomBlocksMenu();
+    
         this.getFbdFile(DEFAULTFBD_FBD_FILEPATH);
         this.recreateFlowchartFromData();
     }

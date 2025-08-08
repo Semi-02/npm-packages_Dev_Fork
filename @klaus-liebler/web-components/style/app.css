@@ -2,18 +2,39 @@
 @import "./dialog.css";
 @import "./loader.css";
 
-
 :root {
-  --main-white-color: #f2f2f2;
-  --main-black-color: black;
-  --main-purple-color: #9e89b8;
-  --blue-3: hsl(211, 57%, 25%);
-  --blue-4: hsl(211, 39%, 44%);
-  --blue-5: hsl(211, 51%, 65%);
-  --blue-7: hsl(211, 90%, 93%);
-  --blue-rich: hsl(211, 65%, 48%);
+  --celadon: #A6D49F;
+  --olivine: #9CB380;
+  --caput: #522A27;
+  --sinopia: #C73E1D;
+  --satin: #C59849;
+  --timberwolf: #EADEDA;
+  --cinereous: #998888;
+  --silver: #BFB8AD;
+  --white: #ffffff;
+  --black: #000000;
+   --color-primary: #A6D49F; /* Celadon */
+  --color-secondary: #9CB380; /* Olivine */
+  --color-accent: #C73E1D; /* Sinopia */
+  --color-bg: #EADEDA; /* Timberwolf */
+  --color-panel: #ffffff; /* Weiß für Kontrast */
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-border: #ccc;
+  --color-input-bg: #f9f9f9;
+  --color-input-border: #ccc;
+  --color-button: #998888; /* Cinereous */
+  --color-button-hover: #BFB8AD; /* Silver */
+  --radius: 10px;
+  --shadow: 0 4px 8px var(--color-shadow);
+  --font-main: "Dosis", sans-serif;
+  --accent: #b4e0b4;
+  --neutral: #dcdcd5;
+  --highlight: #a6d49f;
+  --error: #ff6f61;
+  --bg: #fefefe;
+  --border: #ccc;
+  --text: #333;
 }
-
 * {
   box-sizing: border-box;
 }
@@ -157,32 +178,6 @@
 }
 
 
-#snackbar {
-  visibility: hidden;
-  /* Hidden by default. Visible on click */
-  min-width: 250px;
-  /* Set a default minimum width */
-  margin-left: -125px;
-  /* Divide value of min-width by 2 */
-  background-color: #4e4d4dcd;
-  /* Black background color */
-  color: #fff;
-  /* White text color */
-  text-align: center;
-  /* Centered text */
-  border-radius: 2px;
-  /* Rounded borders */
-  padding: 16px;
-  /* Padding */
-  position: fixed;
-  /* Sit on top of the screen */
-  z-index: 1;
-  /* Add a z-index if needed */
-  left: 50%;
-  /* Center the snackbar */
-  bottom: 30px;
-  /* 30px from the bottom */
-}
 
 
 @keyframes fadein {
@@ -210,13 +205,6 @@
   }
 }
 
-input:invalid {
-  border: 2px dashed red;
-}
-
-input:invalid:required {
-  background-image: linear-gradient(to right, pink, lightgreen);
-}
 
 .info {
   color: rgb(102, 249, 102);
@@ -240,33 +228,12 @@ svg.iconsize {
 }
 
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 25px 0;
-  min-width: 400px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-}
-
-td,
-th {
-  border-top: 1px solid #555555;
-  text-align: left;
-  padding: 8px;
-}
 
 td.minwidth {
   width: 1%;
   white-space: nowrap;
 }
 
-tr:nth-child(odd) {
-  background-color: #dddddd;
-}
-
-tr:nth-child(even) {
-  background-color: #ffffff;
-}
 
 td>figure {
   margin: 0px;

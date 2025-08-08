@@ -180,6 +180,15 @@ overflow: auto;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
   pointer-events: auto;
+
+  &>ul {
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.flowchart-operatorlibdiv.visible {
+  transform: translateX(0%);
 }
 
 .unselectable {
@@ -337,4 +346,3 @@ svg.flowchart-container {
 
 
 }
-
