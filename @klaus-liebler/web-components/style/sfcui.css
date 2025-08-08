@@ -13,7 +13,7 @@
   width: 24px;
   height: 24px;
   border: none;
-  border-radius: 50%;
+  border-radius: 50%; 
   background-color: #007bff;
   color: #fff;
   cursor: pointer;
@@ -386,6 +386,7 @@
 }
 
 .sfc-boolean-section {
+  margin-top: 10px;
   grid-column: 2 / 3;
   grid-row: 1 / 2;
   height: 100%;
@@ -471,5 +472,12 @@
   display: none !important;
 }
 
+.sfc-menu-container {
+  width: 100%;
+  height: 50px;
+  padding: 2px 0 2px 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+
+}
 
 
