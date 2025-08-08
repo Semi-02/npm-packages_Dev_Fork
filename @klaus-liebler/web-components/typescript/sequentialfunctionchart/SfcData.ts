@@ -359,7 +359,7 @@ export class SfcStep {
     hoverButton.style.display = "none";
 
     hoverButton.addEventListener("click", () => {
-      const newAction = new ActionN(`A-${Date.now()}`, "New Action", "newBoolean");
+      const newAction = new ActionN(`A-${Date.now()}`, "New Action", "Red_LED");
       this.actions.push(newAction);
 
       // Statt nur die neue Action zu rendern, die ganze Tabelle neu rendern:
@@ -482,7 +482,7 @@ export abstract class BaseAction {
       if (!step) return;
       const idx = step.actions.indexOf(this);
       if (idx >= 0) {
-        const newAction = new ActionN(`A-${Date.now()}`, "New Action", "newBoolean");
+        const newAction = new ActionN(`A-${Date.now()}`, "New Action", "Red_LED");
         step.actions.splice(idx + 1, 0, newAction);
         // Tabelle neu rendern
         const tableBody = container.closest("tbody");
