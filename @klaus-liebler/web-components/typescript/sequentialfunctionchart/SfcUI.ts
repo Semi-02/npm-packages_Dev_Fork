@@ -9,7 +9,7 @@ import { SFC_NAMESPACE } from "../screen_controller/develop_sfc_controller";
 import "../../style/sfcui.css";
 // Stellt Testdaten bereit
 import { SfcTestDataProvider } from "./SfcTestData";
-
+import { OkDialog } from "../dialog_controller";
 
 
 
@@ -69,25 +69,46 @@ export class SfcUI {
           new MenuItem("💾 Save to (labathome)", () => this.sfcManager.saveToLabathome()),
         ]),
         new Menu("Run", [
-          new MenuItem("▶️ Start ", () => 
+          new MenuItem("▶️ Start ", () => {
+            // Prüfe, ob mindestens 2 Steps vorhanden sind
+            if (!this.sfcManager.sfcData || this.sfcManager.sfcData.steps.length < 2) {
+              this.appManagement.ShowDialog(
+                new OkDialog(
+                  2, // Severity.WARN
+                  "Es müssen mindestens 2 Schritte (Steps) vorhanden sein, um die SFC zu starten."
+                )
+              );
+              return;
+            }
             this.sfcManager.postSfcFile(TEMPSFC_FILEPATH,
               (path) => {
                 const builder = new flatbuffers.Builder(1024);
                 const requestOffset = RequestSFCRun.createRequestSFCRun(builder);
                 builder.finish(RequestWrapper.createRequestWrapper(builder, Requests.RequestSFCRun, requestOffset));
                 this.appManagement.SendFinishedBuilder(SFC_NAMESPACE, builder, 3000);
-              }),
-          ),
+              });
+          }),
           new MenuItem("⏹️ Stop", () => this.sfcManager.stopSfc()),
-          new MenuItem("💾 Save as Default", () => this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH))
+          new MenuItem("💾 Save as Default", () => {
+            // Prüfe, ob mindestens 2 Steps vorhanden sind
+            if (!this.sfcManager.sfcData || this.sfcManager.sfcData.steps.length < 2) {
+              this.appManagement.ShowDialog(
+                new OkDialog(
+                  2, // Severity.WARN
+                  "Es müssen mindestens 2 Schritte (Steps) vorhanden sein, um als Default zu speichern."
+                )
+              );
+              return;
+            }
+            this.sfcManager.postSfcFile(DEFAULTSFC_FILEPATH);
+          })
         ]),
         new Menu("Help", [
           new MenuItem("❓ Show Tutorial", () => this.sfcManager.showTutorial())
-        ]), // Added 'true' to indicate this is a right-aligned menu
+        ]),
       ]
     );
 
-    // Add CSS to position the Help menu at the far right
     mm.Render(menuContainer);
     
    
