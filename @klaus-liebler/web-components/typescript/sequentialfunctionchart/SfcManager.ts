@@ -2,7 +2,7 @@ import { SfcData, SfcStep, BaseTransition, SimpleTransition, ActionN, BaseAction
 import { SfcUI } from "./SfcUI";
 import { SfcCompiler } from "./SfcCompiler";
 import { IAppManagement } from "../utils/interfaces";
-import { OkDialog, OkCancelDialog } from "../dialog_controller";
+import { OkDialog, OkCancelDialog, FilelistDialog } from "../dialog_controller";
 import { Severity } from "../../../commons";
 import { SfcTestDataProvider } from "./SfcTestData";
 import { RequestSFCRun, RequestSFCStop, RequestWrapper, Requests } from "@generated/flatbuffers_ts/functionblock";
@@ -90,21 +90,53 @@ public openFromPC(): void {
 }
 
 public openFromLabathome(): void {
-  const dialog = new OkCancelDialog(
-    Severity.INFO,
-    "Möchten Sie eine SFC-Datei vom Server laden? Ungespeicherte Änderungen gehen verloren.",
-    (ok) => {
-      if (ok) {
-        // Zeige Dialog zur Eingabe des Dateinamens
-        const filename = prompt("Dateiname eingeben (ohne .json Endung):");
-        if (filename) {
-          const fullPath = `${SFCSTORE_BASE_DIRECTORY}${filename}.json`;
-          this.loadSfcFile(fullPath);
-        }
+  // Hole die Dateiliste vom Server
+  fetch(this.options.httpServerBasePath + SFCSTORE_BASE_DIRECTORY)
+  .then(async response => {
+    const text = await response.text();
+    // Versuche zuerst, als JSON zu parsen
+    let files: string[] = [];
+    try {
+      const data = JSON.parse(text);
+      files = (data.files as string[]).filter(f => f.endsWith(".json"));
+    } catch (e) {
+      // Fallback: Regex für Python-Objektsyntax
+      const match = text.match(/'files':\s*\[([^\]]*)\]/);
+      if (match) {
+        files = match[1]
+          .split(',')
+          .map(s => s.replace(/['"\s]/g, ''))
+          .filter(f => f.endsWith('.json'));
       }
     }
-  );
-  this.appManagement.ShowDialog(dialog);
+    if (!files.length) throw new Error("No files found");
+    this.appManagement.ShowDialog(new FilelistDialog(
+      files,
+      (ok, filename) => {
+        if (!ok) return;
+        const fullPath = `${SFCSTORE_BASE_DIRECTORY}${filename}`;
+        this.loadSfcFile(fullPath);
+      },
+      (ok, filename) => {
+        if (!ok) return;
+        this.deleteSfcFile(`${SFCSTORE_BASE_DIRECTORY}${filename}`);
+      }
+    ));
+  })
+  .catch(error => {
+    this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Fehler beim Laden der Dateiliste: ${error.message}`));
+  });
+}
+
+// Optional: Methode zum Löschen einer Datei
+private async deleteSfcFile(path: string) {
+  try {
+    const response = await fetch(this.options.httpServerBasePath + path, { method: 'DELETE' });
+    if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+    this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei ${path} gelöscht`);
+  } catch (error) {
+    this.appManagement.ShowSnackbar(Severity.ERROR, `Fehler beim Löschen: ${error.message}`);
+  }
 }
 
 public saveToPC(): void {
