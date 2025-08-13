@@ -14,6 +14,8 @@ export interface FlowchartData {
         sourceName: string;
         sourceOutput: number;
         connectorType?: ConnectorType;
+        connectorName?: string; // Optional, falls der Name des Connectors angegeben werden soll
+
     }[];
     exposedOutputs?: {
         sourceOperatorIndex: number;
@@ -21,6 +23,7 @@ export interface FlowchartData {
         targetName: string;
         targetInput: number;
         connectorType?: ConnectorType;
+        connectorName?: string; // Optional, falls der Name des Connectors angegeben werden soll
     }[];
 }
 
