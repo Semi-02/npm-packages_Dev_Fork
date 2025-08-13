@@ -396,6 +396,12 @@ export class Flowchart {
         this.appManagement.ShowSnackbar(Severity.SUCCESS, `File now runs on Lab@Home`);
     }
 
+    private _basenameNoExt(fullPath: string): string {
+    const last = fullPath.split('/').pop() || "";
+    return last.replace(/\.[^.]+$/, "");
+}
+
+
     private async postFbdFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
 
         try {
@@ -634,7 +640,11 @@ private updateCustomBlocksMenu() {
                     new MenuItem("📂 Open Default (labathome)", () => this.getFbdFile(DEFAULTFBD_FBD_FILEPATH)),
                     new MenuItem("💾 Save (Local)", () => this.saveFbdToLocalFile()),
                     new MenuItem("💾 Save (labathome)", () => this.enterFilenameAndPostFbd()),
-                    new MenuItem("📦 Save as Superblock", () => this.enterFilenameAndPostMacroFile(FBDMACROSTORE_BASE_DIRECTORY)),
+                    new MenuItem("📦 Save as Superblock", () => this.enterFilenameAndPostMacroFile(FBDMACROSTORE_BASE_DIRECTORY, // ✅ onSuccessAction:
+        (fullPath: string) => {
+            const name = this._basenameNoExt(fullPath);
+            this.buildSuperblockFromCurrentAndPlace(name);
+        })),
                     // TODO: muss für die Selection angepasst werden (Neue funktion)
                     new MenuItem("💾 Save Selection as Macro", () => this.enterFilenameAndPostFbd()), //NEU!!!!!!!!!!!!
                     new MenuItem("📥 Insert Macro from File", async () => {
@@ -653,10 +663,10 @@ private updateCustomBlocksMenu() {
                                 const offsetX = 300;
                                 const offsetY = 200;
 
-                                // 🗺 Alte ID → Neue Operator-Instanz
+                                //  Alte ID → Neue Operator-Instanz
                                 const oldIndexToNewOperator = new Map<number, FlowchartOperator>();
 
-                                // 🔁 Operatoren erzeugen
+                                //  Operatoren erzeugen
                                 for (const opData of data.operators) {
                                     const newOp = this.createOperatorInternal(opData.globalTypeIndex, opData.caption, null);
                                     newOp.MoveTo(opData.posX + offsetX, opData.posY + offsetY);
@@ -869,6 +879,107 @@ private updateCustomBlocksMenu() {
     }
 
 
+    //NEU!!!!!!!!!!!! von Kawi
+    private buildSuperblockFromCurrentAndPlace(name: string) {
+    // 🧠 Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
+    const isInputIface  = (op: FlowchartOperator) =>
+        op.TypeInfo.OperatorName === "InputBlock"  || /(^|\W)Input(\W|$)/i.test(op.TypeInfo.OperatorName);
+
+    const isOutputIface = (op: FlowchartOperator) =>
+        op.TypeInfo.OperatorName === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(op.TypeInfo.OperatorName);
+
+    // 1) interne Operatoren = alle außer den Interface-Blöcken
+    const internalOps: FlowchartOperator[] = [];
+    const ifaceOps = new Set<FlowchartOperator>();
+
+    for (const op of this.operators.values()) {
+        if (isInputIface(op) || isOutputIface(op)) ifaceOps.add(op);
+        else internalOps.push(op);
+    }
+
+    // 2) Operator-Daten (nur intern)
+    const operatorData = internalOps.map(op => ({
+        globalTypeIndex: op.TypeInfo.GlobalTypeIndex,
+        caption: op.Caption,
+        index: op.GlobalOperatorIndex,
+        posX: op.Xpos,
+        posY: op.Ypos,
+        configurationData: op.Config_Copy,
+    }));
+
+    // 3) Links klassifizieren
+    const macroLinks: { fromOperatorIndex:number; fromOutput:number; toOperatorIndex:number; toInput:number; }[] = [];
+    const exposedInputs: any[] = [];
+    const exposedOutputs: any[] = [];
+
+    const pickType = (a: ConnectorType|null, b: ConnectorType|null): ConnectorType => {
+        if (a !== null && a !== undefined) return a as ConnectorType;
+        if (b !== null && b !== undefined) return b as ConnectorType;
+        // Fallback: sollte praktisch nicht passieren
+        return ConnectorType.FLOAT;
+    };
+
+    for (const link of this.links.values()) {
+        const fromOp = link.From.Parent;
+        const toOp   = link.To.Parent;
+
+        const fromIsIface = ifaceOps.has(fromOp);
+        const toIsIface   = ifaceOps.has(toOp);
+
+        // Interne Links bleiben erhalten:
+        if (!fromIsIface && !toIsIface) {
+            macroLinks.push({
+                fromOperatorIndex: fromOp.GlobalOperatorIndex,
+                fromOutput: link.From.LocalConnectorIndex,
+                toOperatorIndex: toOp.GlobalOperatorIndex,
+                toInput: link.To.LocalConnectorIndex,
+            });
+            continue;
+        }
+
+        // InputBlock => externes Input wird auf internen Eingang gemappt
+        if (isInputIface(fromOp) && !toIsIface) {
+            exposedInputs.push({
+                targetOperatorIndex: toOp.GlobalOperatorIndex,
+                targetInput: link.To.LocalConnectorIndex,
+                sourceName: fromOp.Caption,
+                sourceOutput: link.From.LocalConnectorIndex,
+                connectorType: pickType(link.From.Type, link.To.Type),
+                connectorName: fromOp.Caption 
+            });
+            continue;
+        }
+
+        // OutputBlock => externes Output liest von internem Ausgang
+        if (!fromIsIface && isOutputIface(toOp)) {
+            exposedOutputs.push({
+                sourceOperatorIndex: fromOp.GlobalOperatorIndex,
+                sourceOutput: link.From.LocalConnectorIndex,
+                targetName: toOp.Caption,
+                targetInput: link.To.LocalConnectorIndex,
+                connectorType: pickType(link.From.Type, link.To.Type),
+                connectorName: toOp.Caption
+            });
+            continue;
+        }
+
+        // Interface↔Interface ignorieren
+    }
+
+    // 4) MacroData zusammensetzen – NUR interne Ops + interne Links + explicit exposed IO
+    const macroData = {
+        operators: operatorData,
+        links: macroLinks,
+        exposedInputs,
+        exposedOutputs,
+    };
+
+    // 5) Superblock erzeugen & einfügen
+    const title = name && name.trim() ? name.trim() : "CustomBlock";
+    const macro = new MacroOperator(this, title, null, macroData);
+    macro.MoveTo(200, 120);
+    this.operators.set(macro.GlobalOperatorIndex, macro);
+}
 
 
 

@@ -71,7 +71,7 @@ this.AppendConnectors(
     exposedInputs.map((e, i) =>
         new FlowchartInputConnector(
             this,
-            `In${i}`,
+            e.connectorName ?? `In${i}`,
            i, 
            e.connectorType ?? ConnectorType.BOOLEAN // 🆕 direkter Zugriff
         )
@@ -79,7 +79,7 @@ this.AppendConnectors(
     exposedOutputs.map((e, i) =>
         new FlowchartOutputConnector(
             this,
-            `Out${i}`,
+            e.connectorName ?? `Out${i}`,
             i,
             e.connectorType ?? ConnectorType.BOOLEAN // 🆕 direkter Zugriff
             

@@ -1373,7 +1373,7 @@ export class Macro_InputBlockOperator extends FlowchartOperator {
     private O: FlowchartOutputConnector;
     constructor(parent: Flowchart, caption: string, ti: TypeInfo, configurationData: KeyValueTuple[] | null) {
         super(parent, caption, ti, configurationData);
-        this.O = new FlowchartOutputConnector(this, "Out", 0, null);
+        this.O = new FlowchartOutputConnector(this, "Input Block", 0, null);
         this.AppendConnectors([], [this.O]);
 
         this.ElementSvgG.ondblclick = (e) => {
@@ -1389,7 +1389,7 @@ export class Macro_OutputBlockOperator extends FlowchartOperator {
     private I: FlowchartInputConnector;
     constructor(parent: Flowchart, caption: string, ti: TypeInfo, configurationData: KeyValueTuple[] | null) {
         super(parent, caption, ti, configurationData);
-        this.I = new FlowchartInputConnector(this, "In", 0, null);
+        this.I = new FlowchartInputConnector(this, "Output Block", 0, null);
         this.AppendConnectors([this.I], []);
 
 this.ElementSvgG.ondblclick = (e) => {
