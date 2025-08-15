@@ -124,9 +124,7 @@
           flex-direction: row;
           transition: color .2s ease-out;
   
-          :hover {
-            color: red;
-          }
+          
   
           :nth-child(1) {
             width: 30px;
@@ -438,7 +436,7 @@ nav ul li a {
 }
 
 nav ul li a:hover {
-  background-color: #C59849;
+  background-color: #9594a5;
 }
 
 main {
@@ -475,6 +473,14 @@ td, th {
   border-bottom: 1px solid var(--cinereous);
   text-align: left;
   vertical-align: middle;
+}
+
+tr:nth-child(odd) {
+  background-color: #dddddd;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
 }
 
 tr:last-child td {

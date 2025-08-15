@@ -213,7 +213,7 @@ export class AppController implements IAppManagement, IScreenControllerHost {
             </header>
             <nav>${this.menu.Template()}<a href="javascript:void(0);" @click=${() => this.menu.ToggleHamburgerMenu()}><i>≡</i></a></nav>
             <main ${ref(this.mainRef)}></main>
-            <footer>Klaus Liebler, &copy;${new Date(1000*Number(cfg.CREATION_DT)).toLocaleString("de-DE", MyFavouriteDateTimeFormat)} :: GitHash ${cfg.GIT_SHORT_HASH} :: AppName ${cfg.APP_NAME} :: AppVersion ${cfg.APP_VERSION} ${this.additionalFooter}</footer>
+            <footer>Klaus Liebler und Lab@Home Team, &copy;${new Date(1000*Number(cfg.CREATION_DT)).toLocaleString("de-DE", MyFavouriteDateTimeFormat)} :: GitHash ${cfg.GIT_SHORT_HASH} :: AppName ${cfg.APP_NAME} :: AppVersion ${cfg.APP_VERSION} ${this.additionalFooter}</footer>
             <div ${ref(this.modalSpinner)} class="modal"><span class="loader"></span></div>
             <div id="snackbar">Some text some message..</div>
             <div ${ref(this.dialog)}></div>
