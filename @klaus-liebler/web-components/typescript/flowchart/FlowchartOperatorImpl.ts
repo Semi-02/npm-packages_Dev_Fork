@@ -149,19 +149,11 @@ export class OperatorRegistry{
         r.Register(58, Sound, "Sound", PositionType.Output, SingletonType.Singleton, (p, ca, ti, co)=>new Sound_Sound(p, ca, ti, co));
         
         r.Register(59, Control, "PID", PositionType.Default, SingletonType.Default, (p, ca, ti, co)=>new Control_PID(p, ca, ti, co));
-        r.Register(
-    MacroOperator.GlobalTypeIndex,
-    "Custom",                 // group name (z. B. "Custom")
-    "Macro",                  // operator name (sichtbar im UI)
-    PositionType.Default,
-    SingletonType.Default,
-    (p, ca, ti, co) => new MacroOperator(p, ca, co, { operators: [], links: [] })
-);
-r.Register(1001, "Macro", "InputBlock", PositionType.Input, SingletonType.Default,
-    (p, ca, ti, co) => new Macro_InputBlockOperator(p, ca, ti, co));
+        r.Register(60, Custom, "InputBlock"   , PositionType.Input, SingletonType.Default,    (p, ca, ti, co) => new Macro_InputBlockOperator(p, ca, ti, co));
+        r.Register(61, Custom, "OutputBlock"  , PositionType.Output, SingletonType.Default,    (p, ca, ti, co) => new Macro_OutputBlockOperator(p, ca, ti, co));
+       // r.Register(62, Custom, "Macro"        , PositionType.Default,    SingletonType.Default,    (p, ca, ti, co) => new MacroOperator(p, ca, co, { operators: [], links: [] })
 
-r.Register(1002, "Macro", "OutputBlock", PositionType.Output, SingletonType.Default,
-    (p, ca, ti, co) => new Macro_OutputBlockOperator(p, ca, ti, co));
+
 
 
         
