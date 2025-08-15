@@ -90,8 +90,17 @@ export class Flowchart {
     private mode = FlowchartMode.EDIT;
     private operatorRegistry: operatorimpl.OperatorRegistry;
     private simulationManager?: SimulationManager | null;
+
+
+
     private operators = new Map<number, FlowchartOperator>();
     private links = new Map<number, FlowchartLink>();
+
+
+    private macros = new Map<string, [Map<number, FlowchartOperator>, Map<number, FlowchartLink>]>();
+    private macrosNames = new Set<string>();
+
+
     public static readonly DATATYPE2COLOR = new Map([[ConnectorType.BOOLEAN, "RED"], [ConnectorType.COLOR, "GREEN"], [ConnectorType.FLOAT, "BLUE"], [ConnectorType.INTEGER, "YELLOW"], [ConnectorType.COLOR, "PURPLE"]]);
     //Muss beim Löschen+Erzeugen von Operatoren+Links und bei Speichern von Properties zurückgesetzt werden
     private currentDebugInfo: HashAndBufAndMaps | null = null;
@@ -397,9 +406,9 @@ export class Flowchart {
     }
 
     private _basenameNoExt(fullPath: string): string {
-    const last = fullPath.split('/').pop() || "";
-    return last.replace(/\.[^.]+$/, "");
-}
+        const last = fullPath.split('/').pop() || "";
+        return last.replace(/\.[^.]+$/, "");
+    }
 
 
     private async postFbdFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
@@ -430,11 +439,8 @@ export class Flowchart {
     }
 
     private createMacroFile(): string {
-
-        // Get all operators
         const allOperators = Array.from(this.operators.values());
 
-        // Create operator data
         const operators: OperatorData[] = allOperators.map(o => ({
             globalTypeIndex: o.TypeInfo.GlobalTypeIndex,
             caption: o.Caption,
@@ -444,7 +450,6 @@ export class Flowchart {
             configurationData: o.Config_Copy,
         }));
 
-        // Create link data
         const links: LinkData[] = Array.from(this.links.values()).map(l => ({
             fromOperatorIndex: l.From.Parent.GlobalOperatorIndex,
             fromOutput: l.From.LocalConnectorIndex,
@@ -452,13 +457,11 @@ export class Flowchart {
             toInput: l.To.LocalConnectorIndex,
         }));
 
-        // Create macro data
         const macroData: FlowchartData = { operators, links };
-        // Convert to JSON string
-        var macroDataJson = JSON.stringify(macroData, null, 2); // Pretty print for better readability 
-        // DEbugging 
+        var macroDataJson = JSON.stringify(macroData); // Pretty print for better readability 
+
         console.log(`Macro Data JSON: \n ${macroDataJson}`);
-        return JSON.stringify(macroData);
+        return macroDataJson;
     }
 
     private async enterFilenameAndPostMacroFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
@@ -486,9 +489,6 @@ export class Flowchart {
 
             this.appManagement.ShowSnackbar(Severity.SUCCESS, `Successfully saved`);
             if (onSuccessAction) onSuccessAction(fullPath);
-            const macroName = fullPath.split("/").pop()?.replace(".json", "");
-            if (macroName) this.addCustomBlockName(macroName);
-            
 
         } catch (error) {
             console.error('There was a problem with the json post operation:', error);
@@ -496,31 +496,109 @@ export class Flowchart {
             if (onFailAction) onFailAction(fullPath);
         }
     }
-    
-private addCustomBlockName(name: string) {
-    let customBlocks = JSON.parse(localStorage.getItem("customBlocks") || "[]");
-    if (!customBlocks.includes(name)) {
-        customBlocks.push(name);
-        localStorage.setItem("customBlocks", JSON.stringify(customBlocks));
-    }
-    this.updateCustomBlocksMenu();
-}
 
+
+    private async getMacroFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
+        try {
+            const response = await fetch(this.options.httpServerBasePath + path);
+            if (!response.ok) {
+                throw new Error(`Failed to load Macro file from path:${response.statusText}`);
+            }
+
+            const data = await response.json();
+            if (!data) {
+                console.error(`Error loading Macro file from ${path}: Invalid JSON`);
+                if (onFailAction) onFailAction(path);
+                return;
+            }
+
+            console.log(`Macro file loaded from ${path}`);
+            console.log(`Macro data:`, data);
+            const filename = this._basenameNoExt(path);
+            this.setMacroData(filename, data);
+
+            if (onSuccessAction) onSuccessAction(path);
+        } catch (error) {
+            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Failed to load Macro file from ${path}`));
+            console.error(`Error loading Macro file from ${path}:`, error);
+            if (onFailAction) onFailAction(path);
+        }
+    }
+
+    private setMacroData(macroName: string, macroData: FlowchartData) {
+        const operatorsMap = new Map<number, FlowchartOperator>();
+        const linksMap = new Map<number, FlowchartLink>();
+
+        const indexInData2operator = new Map<number, FlowchartOperator>();
+
+        for (const opData of macroData.operators) {
+            if (!this.operatorRegistry.IsIndexKnown(opData.globalTypeIndex)) {
+                console.warn(`Unknown operator type ${opData.globalTypeIndex} in macro ${macroName}`);
+                continue;
+            }
+
+            let op = this.operatorRegistry.CreateByIndex(
+                opData.globalTypeIndex,
+                this,
+                opData.caption,
+                opData.configurationData
+            )!;
+
+            op.MoveTo(opData.posX, opData.posY);
+
+            indexInData2operator.set(opData.index, op);
+            operatorsMap.set(op.GlobalOperatorIndex, op);
+        }
+
+        for (const linkData of macroData.links) {
+            const fromOp = indexInData2operator.get(linkData.fromOperatorIndex);
+            const toOp = indexInData2operator.get(linkData.toOperatorIndex);
+
+            if (!fromOp || !toOp) {
+                console.warn(`Cannot create link: missing operators in macro ${macroName}`);
+                continue;
+            }
+
+            const fromConn = fromOp.GetOutputConnectorByIndex(linkData.fromOutput);
+            const toConn = toOp.GetInputConnectorByIndex(linkData.toInput);
+
+            if (!fromConn || !toConn) {
+                console.warn(`Cannot create link: missing connectors in macro ${macroName}`);
+                continue;
+            }
+
+            const link = new FlowchartLink(this, "", this.Options.defaultLinkColor, fromConn, toConn);
+
+            linksMap.set(link.GlobalLinkIndex, link);
+        }
+
+        this.macros.set(macroName, [operatorsMap, linksMap]);
+
+        console.log(`Stored macro ${macroName} with ${operatorsMap.size} operators and ${linksMap.size} links`);
+
+        
+    }
 private updateCustomBlocksMenu() {
-    const customBlocks = JSON.parse(localStorage.getItem("customBlocks") || "[]");
+    // Get UI elements
     const top = this.operatorLibDiv.querySelector("ul");
     let groupLi = top?.querySelector(".custom-blocks-group") as HTMLLIElement;
+    
+    // Create the group container if it doesn't exist yet
     if (!groupLi) {
         groupLi = document.createElement("li");
         groupLi.classList.add("group-toggle", "custom-blocks-group");
+        
         const toggleIcon = document.createElement("span");
         toggleIcon.classList.add("toggle-arrow");
         toggleIcon.innerText = "▶";
+        
         const groupLabel = document.createElement("span");
         groupLabel.innerText = "CustomBlocks";
+        
         const ul = document.createElement("ul");
         ul.classList.add("nested");
         ul.style.display = "none";
+        
         groupLi.appendChild(toggleIcon);
         groupLi.appendChild(groupLabel);
         groupLi.appendChild(ul);
@@ -532,27 +610,68 @@ private updateCustomBlocksMenu() {
             toggleIcon.innerText = expanded ? "▶" : "▼";
         };
     }
+    
+    // Clear and populate the list
     const ul = groupLi.querySelector("ul")!;
     ul.innerHTML = "";
-    customBlocks.forEach(name => {
+    
+    // Use macrosNames instead of localStorage
+    for (const macroName of this.macrosNames) {
         const li = document.createElement("li");
         li.classList.add("operator-lib-item");
-        li.innerText = name;
+        li.innerText = macroName;
+        
         li.onmousedown = async (e) => {
-            const response = await fetch(FBDMACROSTORE_BASE_DIRECTORY + name + ".json");
-            if (!response.ok) {
-                alert("Datei nicht gefunden!");
-                return;
+            // Check if the macro is already loaded
+            if (!this.macros.has(macroName)) {
+                // Load the macro file first
+                await this.getMacroFile(FBDMACROSTORE_BASE_DIRECTORY + macroName + ".json", 
+                    // Success callback
+                    () => {
+                        // Now create the superblock
+                        this.buildSuperblockFromCurrentAndPlace(macroName);
+                    },
+                    // Failure callback
+                    (path) => {
+                        this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, 
+                            `Failed to load macro "${macroName}" from ${path}`));
+                    }
+                );
+            } else {
+                // Macro is already loaded, just create the superblock
+                this.buildSuperblockFromCurrentAndPlace(macroName);
             }
-            const macroJson = await response.text();
-            const macroData = JSON.parse(macroJson);
-            const macroOp = new MacroOperator(this, macroData.name || name, null, macroData);
-            macroOp.MoveTo(200, 100);
-            this.operators.set(macroOp.GlobalOperatorIndex, macroOp);
         };
+        
         ul.appendChild(li);
-    });
+    }
 }
+
+    private async getMacroFileList() {
+        try {
+            const response = await fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY);
+
+            if (!response.ok) {
+                throw new Error(`Network response was not ok, status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.files || !data.dirs) {
+                throw new Error('Response format is incorrect');
+            }
+
+            data.files.forEach((filename: string) => {
+                console.log(`Found macro file: ${filename}`);
+                this.macrosNames.add(this._basenameNoExt(filename));
+            });
+        } catch (error) {
+            console.error('There was a problem with the fetch operation:', error);
+            // Optionally, provide user feedback about the error
+        }
+    }
+
+
     private async getFbdFile(path: string) {
         try {
             const response = await fetch(this.options.httpServerBasePath + path);
@@ -639,61 +758,7 @@ private updateCustomBlocksMenu() {
                     new MenuItem("📂 Open (labathome)", () => this.getFbdFileList(FBDSTORE_BASE_DIRECTORY)),
                     new MenuItem("📂 Open Default (labathome)", () => this.getFbdFile(DEFAULTFBD_FBD_FILEPATH)),
                     new MenuItem("💾 Save (Local)", () => this.saveFbdToLocalFile()),
-                    new MenuItem("💾 Save (labathome)", () => this.enterFilenameAndPostFbd()),
-                    new MenuItem("📦 Save as Superblock", () => this.enterFilenameAndPostMacroFile(FBDMACROSTORE_BASE_DIRECTORY, // ✅ onSuccessAction:
-        (fullPath: string) => {
-            const name = this._basenameNoExt(fullPath);
-            this.buildSuperblockFromCurrentAndPlace(name);
-        })),
-                    // TODO: muss für die Selection angepasst werden (Neue funktion)
-                    new MenuItem("💾 Save Selection as Macro", () => this.enterFilenameAndPostFbd()), //NEU!!!!!!!!!!!!
-                    new MenuItem("📥 Insert Macro from File", async () => {
-                        const input = document.createElement("input");
-                        input.type = "file";
-                        input.accept = ".fbdmacro";
-                        input.onchange = async () => {
-                            if (!input.files || input.files.length === 0) return;
-
-                            const file = input.files[0];
-                            const content = await file.text();
-
-                            try {
-                                const data = JSON.parse(content) as FlowchartData;
-
-                                const offsetX = 300;
-                                const offsetY = 200;
-
-                                //  Alte ID → Neue Operator-Instanz
-                                const oldIndexToNewOperator = new Map<number, FlowchartOperator>();
-
-                                //  Operatoren erzeugen
-                                for (const opData of data.operators) {
-                                    const newOp = this.createOperatorInternal(opData.globalTypeIndex, opData.caption, null);
-                                    newOp.MoveTo(opData.posX + offsetX, opData.posY + offsetY);
-                                    this.operators.set(newOp.GlobalOperatorIndex, newOp);
-                                    oldIndexToNewOperator.set(opData.index, newOp);
-                                }
-
-                                // 🔁 Links erzeugen
-                                for (const l of data.links) {
-                                    const fromOp = oldIndexToNewOperator.get(l.fromOperatorIndex);
-                                    const toOp = oldIndexToNewOperator.get(l.toOperatorIndex);
-                                    if (!fromOp || !toOp) continue;
-
-                                    const from = fromOp.GetOutputConnectorByIndex(l.fromOutput);
-                                    const to = toOp.GetInputConnectorByIndex(l.toInput);
-
-                                    this.createLink(null, from, to);
-                                }
-
-                            } catch (e) {
-                                this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, "Invalid macro file"));
-                            }
-                        };
-                        input.click();
-                    }),
-
-
+                    new MenuItem("💾 Save (labathome)", () => this.enterFilenameAndPostFbd())
                 ]),
                 new Menu("Debug", [
                     new MenuItem("☭ Start Debug", () => this.postFbdFile(TEMPFBD_FBD_FILEPATH,
@@ -734,6 +799,18 @@ private updateCustomBlocksMenu() {
                         this.flowchartContainerSvgSvg.classList.remove("simulate", "debug");
                         this.flowchartContainerSvgSvg.classList.add("edit");
                     })
+                ]),
+                new Menu("Macro", [
+                    new MenuItem("Create Macro", () => this.enterFilenameAndPostMacroFile(FBDMACROSTORE_BASE_DIRECTORY,
+                        (fullPath: string) => {
+                            console.info(`Macro saved to ${fullPath}`);
+                            //const name = this._basenameNoExt(fullPath);
+                            //this.buildSuperblockFromCurrentAndPlace(name);
+                        })),
+                    new MenuItem("Create Macro from current selection", () => { }),
+                    new MenuItem("Edit Macro", () => { }),
+                    new MenuItem("Delete Macro", () => { }),
+                    new MenuItem("Load Macro from PC", () => { })
                 ])
             ]
         );
@@ -748,19 +825,13 @@ private updateCustomBlocksMenu() {
         this.zoomLevel *= 1.1; // z.B. +10%
         this.applyZoom();
     }
-
-
-
     public ZoomOut() {
         this.zoomLevel /= 1.1; // z.B. -10%
         this.applyZoom();
     }
-
     public GetAllOperators(): FlowchartOperator[] {
         return Array.from(this.operators.values());
     }
-
-
     private applyZoom() {
         this.scalingLayer.setAttribute("transform", `scale(${this.zoomLevel})`);
         this.positionRatio = this.zoomLevel;
@@ -776,15 +847,28 @@ private updateCustomBlocksMenu() {
         }
     }
 
+
+
     //NEU!!!!!!!!!!!! von Kawi
-    private createSuperblock(): void {
-        const name = window.prompt("Wie soll der Superblock heißen?", "MeinSuperblock");
-        if (!name) return;
+    private buildSuperblockFromCurrentAndPlace(name: string) {
+        // 🧠 Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
+        const isInputIface = (op: FlowchartOperator) =>
+            op.TypeInfo.OperatorName === "InputBlock" || /(^|\W)Input(\W|$)/i.test(op.TypeInfo.OperatorName);
 
-        const allOperators = this.GetAllOperators();
-        const internalOperatorIds = new Set(allOperators.map(op => op.GlobalOperatorIndex));
+        const isOutputIface = (op: FlowchartOperator) =>
+            op.TypeInfo.OperatorName === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(op.TypeInfo.OperatorName);
 
-        const operatorData = allOperators.map(op => ({
+        // 1) interne Operatoren = alle außer den Interface-Blöcken
+        const internalOps: FlowchartOperator[] = [];
+        const ifaceOps = new Set<FlowchartOperator>();
+
+        for (const op of this.operators.values()) {
+            if (isInputIface(op) || isOutputIface(op)) ifaceOps.add(op);
+            else internalOps.push(op);
+        }
+
+        // 2) Operator-Daten (nur intern)
+        const operatorData = internalOps.map(op => ({
             globalTypeIndex: op.TypeInfo.GlobalTypeIndex,
             caption: op.Caption,
             index: op.GlobalOperatorIndex,
@@ -793,246 +877,82 @@ private updateCustomBlocksMenu() {
             configurationData: op.Config_Copy,
         }));
 
-        const macroLinks = [];
-        const exposedInputs = [];
-        const exposedOutputs = [];
+        // 3) Links klassifizieren
+        const macroLinks: { fromOperatorIndex: number; fromOutput: number; toOperatorIndex: number; toInput: number; }[] = [];
+        const exposedInputs: any[] = [];
+        const exposedOutputs: any[] = [];
+
+        const pickType = (a: ConnectorType | null, b: ConnectorType | null): ConnectorType => {
+            if (a !== null && a !== undefined) return a as ConnectorType;
+            if (b !== null && b !== undefined) return b as ConnectorType;
+            // Fallback: sollte praktisch nicht passieren
+            return ConnectorType.FLOAT;
+        };
 
         for (const link of this.links.values()) {
             const fromOp = link.From.Parent;
             const toOp = link.To.Parent;
 
-            const fromOpIndex = fromOp.GlobalOperatorIndex;
-            const toOpIndex = toOp.GlobalOperatorIndex;
+            const fromIsIface = ifaceOps.has(fromOp);
+            const toIsIface = ifaceOps.has(toOp);
 
-            const fromInside = internalOperatorIds.has(fromOpIndex);
-            const toInside = internalOperatorIds.has(toOpIndex);
-
-            if (fromInside && toInside) {
+            // Interne Links bleiben erhalten:
+            if (!fromIsIface && !toIsIface) {
                 macroLinks.push({
-                    fromOperatorIndex: fromOpIndex,
+                    fromOperatorIndex: fromOp.GlobalOperatorIndex,
                     fromOutput: link.From.LocalConnectorIndex,
-                    toOperatorIndex: toOpIndex,
+                    toOperatorIndex: toOp.GlobalOperatorIndex,
                     toInput: link.To.LocalConnectorIndex,
                 });
+                continue;
             }
 
-            if (!fromInside && toInside) {
+            // InputBlock => externes Input wird auf internen Eingang gemappt
+            if (isInputIface(fromOp) && !toIsIface) {
                 exposedInputs.push({
-                    targetOperatorIndex: toOpIndex,
+                    targetOperatorIndex: toOp.GlobalOperatorIndex,
                     targetInput: link.To.LocalConnectorIndex,
                     sourceName: fromOp.Caption,
                     sourceOutput: link.From.LocalConnectorIndex,
-                    connectorType: link.From.Type as ConnectorType  // ✅ Cast hinzugefügt
+                    connectorType: pickType(link.From.Type, link.To.Type),
+                    connectorName: fromOp.Caption
                 });
+                continue;
             }
 
-            if (fromInside && !toInside) {
+            // OutputBlock => externes Output liest von internem Ausgang
+            if (!fromIsIface && isOutputIface(toOp)) {
                 exposedOutputs.push({
-                    sourceOperatorIndex: fromOpIndex,
+                    sourceOperatorIndex: fromOp.GlobalOperatorIndex,
                     sourceOutput: link.From.LocalConnectorIndex,
                     targetName: toOp.Caption,
                     targetInput: link.To.LocalConnectorIndex,
-                    connectorType: link.From.Type as ConnectorType  // ✅ Cast hinzugefügt
+                    connectorType: pickType(link.From.Type, link.To.Type),
+                    connectorName: toOp.Caption
                 });
+                continue;
             }
+
+            // Interface↔Interface ignorieren
         }
 
-        // 🔍 Jetzt: offene Eingänge und Ausgänge ohne Verbindung erkennen
-        for (const op of allOperators) {
-            // Eingänge prüfen
-            for (const [i, inputConnector] of op.InputsKVIt) {
-                if (inputConnector.LinksLength === 0) {
-                    exposedInputs.push({
-                        targetOperatorIndex: op.GlobalOperatorIndex,
-                        targetInput: i,
-                        sourceName: "UNCONNECTED",
-                        sourceOutput: -1,
-                        connectorType: inputConnector.Type as ConnectorType  // ✅ Cast hinzugefügt
-                    });
-                }
-            }
-
-            // Ausgänge prüfen
-            for (const [i, outputConnector] of op.OutputsKVIt) {
-                if (outputConnector.LinksLength === 0) {
-                    exposedOutputs.push({
-                        sourceOperatorIndex: op.GlobalOperatorIndex,
-                        sourceOutput: i,
-                        targetName: "UNCONNECTED",
-                        targetInput: -1,
-                        connectorType: outputConnector.Type as ConnectorType  // ✅ Cast hinzugefügt
-                    });
-                }
-            }
-        }
-
-        const macroData: FlowchartData = {
+        // 4) MacroData zusammensetzen – NUR interne Ops + interne Links + explicit exposed IO
+        const macroData = {
             operators: operatorData,
             links: macroLinks,
             exposedInputs,
-            exposedOutputs
+            exposedOutputs,
         };
 
-        const macro = new MacroOperator(this, name, null, macroData);
-        macro.MoveTo(200, 100);
+        // 5) Superblock erzeugen & einfügen
+        const title = name && name.trim() ? name.trim() : "CustomBlock";
+        const macro = new MacroOperator(this, title, null, macroData);
+        macro.MoveTo(200, 120);
         this.operators.set(macro.GlobalOperatorIndex, macro);
     }
 
 
-    //NEU!!!!!!!!!!!! von Kawi
-    private buildSuperblockFromCurrentAndPlace(name: string) {
-    // 🧠 Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
-    const isInputIface  = (op: FlowchartOperator) =>
-        op.TypeInfo.OperatorName === "InputBlock"  || /(^|\W)Input(\W|$)/i.test(op.TypeInfo.OperatorName);
-
-    const isOutputIface = (op: FlowchartOperator) =>
-        op.TypeInfo.OperatorName === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(op.TypeInfo.OperatorName);
-
-    // 1) interne Operatoren = alle außer den Interface-Blöcken
-    const internalOps: FlowchartOperator[] = [];
-    const ifaceOps = new Set<FlowchartOperator>();
-
-    for (const op of this.operators.values()) {
-        if (isInputIface(op) || isOutputIface(op)) ifaceOps.add(op);
-        else internalOps.push(op);
-    }
-
-    // 2) Operator-Daten (nur intern)
-    const operatorData = internalOps.map(op => ({
-        globalTypeIndex: op.TypeInfo.GlobalTypeIndex,
-        caption: op.Caption,
-        index: op.GlobalOperatorIndex,
-        posX: op.Xpos,
-        posY: op.Ypos,
-        configurationData: op.Config_Copy,
-    }));
-
-    // 3) Links klassifizieren
-    const macroLinks: { fromOperatorIndex:number; fromOutput:number; toOperatorIndex:number; toInput:number; }[] = [];
-    const exposedInputs: any[] = [];
-    const exposedOutputs: any[] = [];
-
-    const pickType = (a: ConnectorType|null, b: ConnectorType|null): ConnectorType => {
-        if (a !== null && a !== undefined) return a as ConnectorType;
-        if (b !== null && b !== undefined) return b as ConnectorType;
-        // Fallback: sollte praktisch nicht passieren
-        return ConnectorType.FLOAT;
-    };
-
-    for (const link of this.links.values()) {
-        const fromOp = link.From.Parent;
-        const toOp   = link.To.Parent;
-
-        const fromIsIface = ifaceOps.has(fromOp);
-        const toIsIface   = ifaceOps.has(toOp);
-
-        // Interne Links bleiben erhalten:
-        if (!fromIsIface && !toIsIface) {
-            macroLinks.push({
-                fromOperatorIndex: fromOp.GlobalOperatorIndex,
-                fromOutput: link.From.LocalConnectorIndex,
-                toOperatorIndex: toOp.GlobalOperatorIndex,
-                toInput: link.To.LocalConnectorIndex,
-            });
-            continue;
-        }
-
-        // InputBlock => externes Input wird auf internen Eingang gemappt
-        if (isInputIface(fromOp) && !toIsIface) {
-            exposedInputs.push({
-                targetOperatorIndex: toOp.GlobalOperatorIndex,
-                targetInput: link.To.LocalConnectorIndex,
-                sourceName: fromOp.Caption,
-                sourceOutput: link.From.LocalConnectorIndex,
-                connectorType: pickType(link.From.Type, link.To.Type),
-                connectorName: fromOp.Caption 
-            });
-            continue;
-        }
-
-        // OutputBlock => externes Output liest von internem Ausgang
-        if (!fromIsIface && isOutputIface(toOp)) {
-            exposedOutputs.push({
-                sourceOperatorIndex: fromOp.GlobalOperatorIndex,
-                sourceOutput: link.From.LocalConnectorIndex,
-                targetName: toOp.Caption,
-                targetInput: link.To.LocalConnectorIndex,
-                connectorType: pickType(link.From.Type, link.To.Type),
-                connectorName: toOp.Caption
-            });
-            continue;
-        }
-
-        // Interface↔Interface ignorieren
-    }
-
-    // 4) MacroData zusammensetzen – NUR interne Ops + interne Links + explicit exposed IO
-    const macroData = {
-        operators: operatorData,
-        links: macroLinks,
-        exposedInputs,
-        exposedOutputs,
-    };
-
-    // 5) Superblock erzeugen & einfügen
-    const title = name && name.trim() ? name.trim() : "CustomBlock";
-    const macro = new MacroOperator(this, title, null, macroData);
-    macro.MoveTo(200, 120);
-    this.operators.set(macro.GlobalOperatorIndex, macro);
-}
-
-
-
-
-    //NEU!!!!!!!!!!!!
-    private async saveSelectedAsMacro() {
-        const selectedOps = [...this.selectedOperators];
-        if (selectedOps.length === 0) {
-            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, "No blocks selected"));
-            return;
-        }
-
-
-
-        const selectedOperatorIndexes = new Set(selectedOps.map(o => o.GlobalOperatorIndex));
-
-        const operators: OperatorData[] = selectedOps.map(o => ({
-            globalTypeIndex: o.TypeInfo.GlobalTypeIndex,
-            caption: o.Caption,
-            index: o.GlobalOperatorIndex,
-            posX: o.Xpos,
-            posY: o.Ypos,
-            configurationData: o.Config_Copy,
-        }));
-
-        const links: LinkData[] = [];
-
-        for (const l of this.links.values()) {
-            const fromIndex = l.From.Parent.GlobalOperatorIndex;
-            const toIndex = l.To.Parent.GlobalOperatorIndex;
-            if (selectedOperatorIndexes.has(fromIndex) && selectedOperatorIndexes.has(toIndex)) {
-                links.push({
-                    fromOperatorIndex: fromIndex,
-                    fromOutput: l.From.LocalConnectorIndex,
-                    toOperatorIndex: toIndex,
-                    toInput: l.To.LocalConnectorIndex
-                });
-            }
-        }
-
-        const macroData: FlowchartData = { operators, links };
-        const json = JSON.stringify(macroData);
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "macro.fbdmacro";
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-
-    public RenderUi(subcontainer: HTMLDivElement) {
+    public async RenderUi(subcontainer: HTMLDivElement) {
         if (!subcontainer) throw new Error("container is null");
         //let subcontainer = <HTMLDivElement>Html(container, "div", [], ["develop-ui"]);
 
@@ -1312,8 +1232,11 @@ private updateCustomBlocksMenu() {
             this.operators.set(o.GlobalOperatorIndex, o);
         });
 
+        await this.getMacroFileList()
+
         this.updateCustomBlocksMenu();
     
+
         this.getFbdFile(DEFAULTFBD_FBD_FILEPATH);
         this.recreateFlowchartFromData();
     }
