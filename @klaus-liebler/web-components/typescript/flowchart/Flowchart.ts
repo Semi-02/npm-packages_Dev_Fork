@@ -573,16 +573,16 @@ export class Flowchart {
         }
 
         this.macros.set(macroName, [operatorsMap, linksMap]);
-
+        this.macrosNames.add(macroName);
         console.log(`Stored macro ${macroName} with ${operatorsMap.size} operators and ${linksMap.size} links`);
-
-        
+        this.updateCustomBlocksMenu();
     }
 private updateCustomBlocksMenu() {
-    // Get UI elements
+    // Get UI elements 
+    console.log( `UpdateCoustomMacros: ${this.macrosNames.size} `, this.macrosNames);
     const top = this.operatorLibDiv.querySelector("ul");
     let groupLi = top?.querySelector(".custom-blocks-group") as HTMLLIElement;
-    
+   
     // Create the group container if it doesn't exist yet
     if (!groupLi) {
         groupLi = document.createElement("li");
@@ -645,30 +645,48 @@ private updateCustomBlocksMenu() {
         
         ul.appendChild(li);
     }
-}
+    }
 
     private async getMacroFileList() {
-        try {
-            const response = await fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY);
+        // Hole die Dateiliste vom Server
+        fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY)
+            .then(async response => {
+                const text = await response.text();
+                // Versuche zuerst, als JSON zu parsen
+                console.log(`Received file list: ${text}`);
+                let files: string[] = [];
+                try {
+                    const data = JSON.parse(text);
+                    files = (data.files as string[]).filter(f => f.endsWith(".json"));
+                } catch (e) {
+                    // Fallback: Regex für Python-Objektsyntax
+                    const match = text.match(/'files':\s*\[([^\]]*)\]/);
+                    if (match) {
+                        files = match[1]
+                            .split(',')
+                            .map(s => s.replace(/['"\s]/g, ''))
+                            .filter(f => f.endsWith('.json'));
+                    }
+                }
+                if (!files.length) throw new Error("No files found");
+            
+                 //console.log(`Parsed files: ${files}`); // hier string drinnen vorhanden mit .json
 
-            if (!response.ok) {
-                throw new Error(`Network response was not ok, status: ${response.status}`);
-            }
+                files.forEach(f => {
+                    f = f.replace(/\.json$/, ''); // Entferne die .json Endung
+                    console.log(`Found macro file: ${f}`);
+                })
 
-            const data = await response.json();
-
-            if (!data.files || !data.dirs) {
-                throw new Error('Response format is incorrect');
-            }
-
-            data.files.forEach((filename: string) => {
-                console.log(`Found macro file: ${filename}`);
-                this.macrosNames.add(this._basenameNoExt(filename));
+                // ab hier ohne .json 
+                // files -> macrosNames 
+                //Todo : .json entfernen und in this.macrosNames speichern
+                // viuelleicht = files.forEach(f => this.macrosNames.add(f.replace(/\.json$/, '')));
+            })
+            .catch(error => {
+                if (error.message !== "No files found") {
+                    this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, `Fehler beim Laden der Dateiliste: ${error.message}`));
+                }
             });
-        } catch (error) {
-            console.error('There was a problem with the fetch operation:', error);
-            // Optionally, provide user feedback about the error
-        }
     }
 
 
@@ -810,7 +828,8 @@ private updateCustomBlocksMenu() {
                     new MenuItem("Create Macro from current selection", () => { }),
                     new MenuItem("Edit Macro", () => { }),
                     new MenuItem("Delete Macro", () => { }),
-                    new MenuItem("Load Macro from PC", () => { })
+                    new MenuItem("Load Macro from PC", () => { }),
+                    new MenuItem("Reload Macros from labathome", () => this.getMacroFileList())
                 ])
             ]
         );
@@ -1233,9 +1252,6 @@ private updateCustomBlocksMenu() {
         });
 
         await this.getMacroFileList()
-
-        this.updateCustomBlocksMenu();
-    
 
         this.getFbdFile(DEFAULTFBD_FBD_FILEPATH);
         this.recreateFlowchartFromData();
