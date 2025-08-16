@@ -673,9 +673,12 @@ private updateCustomBlocksMenu() {
                  //console.log(`Parsed files: ${files}`); // hier string drinnen vorhanden mit .json
 
                 files.forEach(f => {
-                    f = f.replace(/\.json$/, ''); // Entferne die .json Endung
-                    console.log(`Found macro file: ${f}`);
-                })
+                    const macroName = f.replace(/\.json$/, '');
+                    this.macrosNames.add(macroName); // ✅ HINZUFÜGEN zur Menge
+                    console.log(`Found macro file: ${macroName}`);
+                });
+                this.updateCustomBlocksMenu(); // ✅ Menüliste aktualisieren
+
 
                 // ab hier ohne .json 
                 // files -> macrosNames 
@@ -871,6 +874,7 @@ private updateCustomBlocksMenu() {
     //NEU!!!!!!!!!!!! von Kawi
     private buildSuperblockFromCurrentAndPlace(name: string) {
         // 🧠 Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
+    
         const isInputIface = (op: FlowchartOperator) =>
             op.TypeInfo.OperatorName === "InputBlock" || /(^|\W)Input(\W|$)/i.test(op.TypeInfo.OperatorName);
 
