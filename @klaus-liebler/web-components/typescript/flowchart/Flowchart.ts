@@ -15,6 +15,7 @@ import { KeyValueTuple, Severity } from "@klaus-liebler/commons";
 import "../../style/flowchart.css"
 import { MacroOperator } from "./MacroOperatorImpl";
 
+
 //see devicemanager.hh
 const FBDSTORE_BASE_DIRECTORY = "/spiffs/fbdstore/";
 const DEFAULTFBD_FBD_FILEPATH = "/spiffs/defaultfbd.fbd";
@@ -579,6 +580,7 @@ private updateCustomBlocksMenu() {
         li.innerText = macroName;
         
         li.onmousedown = async (e) => {
+             if (e.button !== 0) return;
             // Check if the macro is already loaded
             if (!this.macros.has(macroName)) {
                 // Load the macro file first
@@ -599,6 +601,24 @@ private updateCustomBlocksMenu() {
                 this.buildSuperblockFromCurrentAndPlace(macroName);
             }
         };
+
+li.oncontextmenu = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const macroFile = `${FBDMACROSTORE_BASE_DIRECTORY}${macroName}.json`;
+
+  this.appManagement.ShowDialog(new OkDialog(
+    Severity.WARN,
+    `Makro "${macroName}" wirklich löschen?`,
+    (ok) => {
+      if (!ok) return;                  // ✅ nur bei Bestätigung
+      this.deleteMacroFile(macroFile);  // <-- jetzt erst löschen
+    }
+  ));
+};
+
+
         
         ul.appendChild(li);
     }
@@ -648,6 +668,79 @@ private updateCustomBlocksMenu() {
                 }
             });
     }
+
+
+    // NEU in Flowchart
+private openMacrosFromLabathome(): void {
+    fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY)
+        .then(async response => {
+            const text = await response.text();
+
+            let files: string[] = [];
+            try {
+                const data = JSON.parse(text);
+                files = (data.files as string[]).filter(f => f.endsWith(".json"));
+            } catch (e) {
+                const match = text.match(/'files':\s*\[([^\]]*)\]/);
+                if (match) {
+                    files = match[1]
+                        .split(',')
+                        .map(s => s.replace(/['"\s]/g, ''))
+                        .filter(f => f.endsWith('.json'));
+                }
+            }
+
+            if (!files.length) throw new Error("No files found");
+
+            this.appManagement.ShowDialog(new FilelistDialog(
+                files,
+                // Öffnen: (hier könntest du optional direkt Superblock einfügen)
+                (ok, filename) => {
+                    if (!ok) return;
+                    const fullPath = `${FBDMACROSTORE_BASE_DIRECTORY}${filename}`;
+
+                    // Nur Superblock einfügen, keine Ursprungsblöcke:
+                    this.getMacroFile(fullPath, () => {
+                        const name = this._basenameNoExt(filename);
+                        this.buildSuperblockFromCurrentAndPlace(name);
+                    });
+                },
+                // Löschen:
+                (ok, filename) => {
+                    if (!ok) return;
+                    this.deleteMacroFile(`${FBDMACROSTORE_BASE_DIRECTORY}${filename}`);
+                }
+            ));
+        })
+        .catch(error => {
+            this.appManagement.ShowDialog(new OkDialog(
+                Severity.ERROR,
+                `Fehler beim Laden der Dateiliste: ${error.message}`
+            ));
+        });
+}
+
+
+    // NEU in Flowchart
+private async deleteMacroFile(path: string) {
+    try {
+        const response = await fetch(this.options.httpServerBasePath + path, { method: 'DELETE' });
+        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+
+        // Aus internen Strukturen entfernen
+        const name = this._basenameNoExt(path);
+        this.macros.delete(name);
+        this.macrosNames.delete(name);
+
+        // UI aktualisieren
+        this.updateCustomBlocksMenu();
+
+        this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei ${path} gelöscht`);
+    } catch (error: any) {
+        this.appManagement.ShowSnackbar(Severity.ERROR, `Fehler beim Löschen: ${error.message}`);
+    }
+}
+
 
 
     private async getFbdFile(path: string) {
@@ -787,7 +880,7 @@ private updateCustomBlocksMenu() {
                         })),
                     new MenuItem("Create Macro from current selection", () => { }),
                     new MenuItem("Edit Macro", () => { }),
-                    new MenuItem("Delete Macro", () => { }),
+                    new MenuItem("Delete Macro", () => this.openMacrosFromLabathome()),
                     new MenuItem("Load Macro from PC", () => { }),
                     new MenuItem("Reload Macros from labathome", () => this.getMacroFileList())
                 ])
