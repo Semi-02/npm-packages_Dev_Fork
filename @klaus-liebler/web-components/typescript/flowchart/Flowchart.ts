@@ -525,58 +525,15 @@ export class Flowchart {
         }
     }
 
-    private setMacroData(macroName: string, macroData: FlowchartData) {
-        const operatorsMap = new Map<number, FlowchartOperator>();
-        const linksMap = new Map<number, FlowchartLink>();
+private setMacroData(macroName: string, macroData: FlowchartData) {
+    // ❌ NICHT mehr direkt Operators/Links ins Flowchart einfügen
+    // sondern nur im Speicher halten
+    this.macros.set(macroName, [new Map(), new Map()]);
+    this.macrosNames.add(macroName);
+    console.log(`Stored macro ${macroName}`);
+    this.updateCustomBlocksMenu();
+}
 
-        const indexInData2operator = new Map<number, FlowchartOperator>();
-
-        for (const opData of macroData.operators) {
-            if (!this.operatorRegistry.IsIndexKnown(opData.globalTypeIndex)) {
-                console.warn(`Unknown operator type ${opData.globalTypeIndex} in macro ${macroName}`);
-                continue;
-            }
-
-            let op = this.operatorRegistry.CreateByIndex(
-                opData.globalTypeIndex,
-                this,
-                opData.caption,
-                opData.configurationData
-            )!;
-
-            op.MoveTo(opData.posX, opData.posY);
-
-            indexInData2operator.set(opData.index, op);
-            operatorsMap.set(op.GlobalOperatorIndex, op);
-        }
-
-        for (const linkData of macroData.links) {
-            const fromOp = indexInData2operator.get(linkData.fromOperatorIndex);
-            const toOp = indexInData2operator.get(linkData.toOperatorIndex);
-
-            if (!fromOp || !toOp) {
-                console.warn(`Cannot create link: missing operators in macro ${macroName}`);
-                continue;
-            }
-
-            const fromConn = fromOp.GetOutputConnectorByIndex(linkData.fromOutput);
-            const toConn = toOp.GetInputConnectorByIndex(linkData.toInput);
-
-            if (!fromConn || !toConn) {
-                console.warn(`Cannot create link: missing connectors in macro ${macroName}`);
-                continue;
-            }
-
-            const link = new FlowchartLink(this, "", this.Options.defaultLinkColor, fromConn, toConn);
-
-            linksMap.set(link.GlobalLinkIndex, link);
-        }
-
-        this.macros.set(macroName, [operatorsMap, linksMap]);
-        this.macrosNames.add(macroName);
-        console.log(`Stored macro ${macroName} with ${operatorsMap.size} operators and ${linksMap.size} links`);
-        this.updateCustomBlocksMenu();
-    }
 private updateCustomBlocksMenu() {
     // Get UI elements 
     console.log( `UpdateCoustomMacros: ${this.macrosNames.size} `, this.macrosNames);
