@@ -463,24 +463,24 @@ table {
 }
 
 thead {
-  
+  background-color: #a96a15;
   color: var(--black);
   font-weight: bold;
 }
 
-td, th {
-  padding: 14px;
-  border-bottom: 1px solid var(--cinereous);
+td,
+th {
+  border-top: 1px solid #555555;
   text-align: left;
-  vertical-align: middle;
+  padding: 14px;
 }
 
 tr:nth-child(odd) {
-  background-color: #dddddd;
+  background-color: #dad9e673;
 }
 
 tr:nth-child(even) {
-  background-color: #dddddd;
+  background-color: #ffffff;
 }
 
 tr:last-child td {
