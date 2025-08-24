@@ -152,28 +152,29 @@ export class HeaterExperimentController extends ScreenController {
           </table>
     `
 
-private setMyBubble(range: HTMLInputElement) {
-  const bubble = <HTMLOutputElement>range.nextElementSibling;
-  const val = range.valueAsNumber;
-  const min = Number(range.min) || 0;
-  const max = Number(range.max) || 100;
+    /*[Projekt-Erweiterung] Range Slider Bubble Position */
+    private setMyBubble(range: HTMLInputElement) {
+    const bubble = <HTMLOutputElement>range.nextElementSibling;
+    const val = range.valueAsNumber;
+    const min = Number(range.min) || 0;
+    const max = Number(range.max) || 100;
 
-  bubble.innerHTML = val.toString();
+    bubble.innerHTML = val.toString();
 
-  const percent = (val - min) / (max - min);
+    const percent = (val - min) / (max - min);
 
-  // Position berechnen basierend auf tatsächlicher Breite
-  const sliderWidth = range.offsetWidth;
-  const bubbleWidth = bubble.offsetWidth;
-  const thumbSize = 20; // passend zu deinem CSS
+    // Position berechnen basierend auf tatsächlicher Breite
+    const sliderWidth = range.offsetWidth;
+    const bubbleWidth = bubble.offsetWidth;
+    const thumbSize = 20; // passend zu deinem CSS
 
-  const offset = percent * (sliderWidth - thumbSize) + (thumbSize / 2) - (bubbleWidth / 2);
+    const offset = percent * (sliderWidth - thumbSize) + (thumbSize / 2) - (bubbleWidth / 2);
 
-  bubble.style.left = `${offset}px`;
-}
-    
+    bubble.style.left = `${offset}px`;
+    }
+        
 
-public OnFirstStart(): void {
+    public OnFirstStart(): void {
         
         this.timer = window.setInterval(() => { this.sendAndReceive(); }, 1000);
         this.onModeChange(0);

@@ -1,5 +1,5 @@
 .develop-ui {
-  position:relative;
+  position:relative; /* [Projekt-Erweiterung]*/
   display: grid;
   grid-template-rows: auto 1fr;
   grid-template-columns: 1fr auto;
@@ -22,7 +22,7 @@
     text-decoration: none;
   }
 }
-/* Neue Spalte mit Button */
+/* [Projekt-Erweiterung] Positionierung der Operator-Liste */
 .operator-button-column {
   grid-row: 2;
   grid-column: 1;
@@ -32,6 +32,7 @@
   background: transparent;
   position: relative;
 }
+/* [Projekt-Erweiterung] Positionierung des Buttons */
 .operator-button-container {
   position: absolute;
   top: 50%;
@@ -41,18 +42,16 @@
   pointer-events: auto;
 }
 
-/*liste links*/
+/* [Projekt-Erweiterung] Entfernt die Aufzählungszeichen der Operator-Liste */
 .operator-lib-item {
   cursor: pointer;
-  
   border-radius: 4px;
-  transition: background-color 0.2s;
- 
+  transition: background-color 0.2s; 
   padding-left: 15px;
 }
 
 
-
+/* [Projekt-Erweiterung] Hover-Effekt für Listeneinträge */
 .operator-lib-item:hover {
   background-color: #4a90e2; /* z.B. hellblau */
   color: white;
@@ -67,12 +66,13 @@
   background-color: #ffffff;
   /*background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
  */
- background-image: none;
-width: 100%;
-  height: 100%;
-overflow: auto;
+  background-image: none; /* [Projekt-Erweiterung]*/
+  width: 100%;            /*+*/
+  height: 100%;           /*+*/
+  overflow: auto;         /*+*/
 
   }
+  /* [Projekt-Erweiterung] Zoom-Label */
   .zoom-label {
     background-color: rgb(192, 192, 192);
     color: black;
@@ -88,7 +88,7 @@ overflow: auto;
   .flowchart-container {
     touch-action: none;
   }
-
+  /* [Projekt-Erweiterung] Toggle-Button für Operator-Liste */
   .operator-toggle-button {
 
     background-color: #797a7e;
@@ -104,10 +104,11 @@ overflow: auto;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     transition: background-color 0.3s;
   }
-  
+  /* [Projekt-Erweiterung] Hover-Effekt für Toggle-Button */
   .operator-toggle-button:hover {
     background-color: #2344aa;
   }
+
   .flowchart-operator.selected {
     outline: 2px solid orange;
     box-shadow: 0 0 10px orange;
@@ -119,12 +120,12 @@ overflow: auto;
   grid-column: 2;
   margin: 5px;
 }
-
+/* [Projekt-Erweiterung] dropdown menu */
 .dropdown {
   float: left;
   overflow: hidden;
 }
-
+/* [Projekt-Erweiterung] Dropdown-Button */
 .dropdown .dropbtn {
   font-size: 16px;
   border: none;
@@ -136,13 +137,13 @@ overflow: auto;
   margin: 0;
 }
 
-
+/* [Projekt-Erweiterung] Hover-Effekt für Toolbar-Links */
 .develop-toolbar a:hover,
 .dropdown:hover .dropbtn,
 .dropbtn:focus {
   background-color: red;
 }
-
+/* [Projekt-Erweiterung] Dropdown-Inhalt */
 .dropdown-content {
   display: none;
   position: absolute;
@@ -151,7 +152,7 @@ overflow: auto;
   box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
   z-index: 1;
 }
-
+/* [Projekt-Erweiterung] Show dropdown on hover */
 .dropdown-content a {
   float: none;
   color: black;
@@ -160,10 +161,12 @@ overflow: auto;
   display: block;
   text-align: left;
 }
-
+/* [Projekt-Erweiterung] Hover-Effekt für Dropdown-Links */
 .dropdown-content a:hover {
   background-color: #ddd;
 }
+
+/* [Projekt-Erweiterung] Zeigt das Dropdown-Menü beim Hover */
 .flowchart-operatorlibdiv.unselectable{
   padding-left: 45px;
   padding-top: 20px;
@@ -176,12 +179,13 @@ overflow: auto;
   background-color: grey;
   color: #f9f9f9;
   overflow-y: auto;
-  z-index: 1500;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  pointer-events: auto;
+  z-index: 1500;                   /* [Projekt-Erweiterung]*/
+  transform: translateX(-100%);    /* [Projekt-Erweiterung]*/
+  transition: transform 0.3s ease; /* [Projekt-Erweiterung]*/
+  pointer-events: auto;            /* [Projekt-Erweiterung]*/
 
 }
+/* [Projekt-Erweiterung] Entfernt die Aufzählungszeichen der Operator-Liste */
 .flowchart-operatorlibdiv ul {
   list-style: none;
   padding-left: 0; 
@@ -224,7 +228,7 @@ svg.flowchart-container.debug {
     fill: rgb(55, 68, 253)
   }
 }
-
+/* [Projekt-Erweiterung] Lasso-Select-Box */
 .lasso-select {
   position: absolute;
   border: 1px dashed gray;
@@ -288,6 +292,8 @@ svg.flowchart-container {
     font: 12px sans-serif;
     text-anchor: end;
   }
+
+  /* [Projekt-Erweiterung]*/
   .zoom-controls button {
     background-color: white;
     border: 1px solid black;
@@ -315,7 +321,7 @@ svg.flowchart-container {
     font: 12px sans-serif;
   }
 
-/* Style für Gruppenüberschrift (z.B. ▶ Arithmetic) */
+/* [Projekt-Erweiterung] Style für Gruppenüberschrift (z.B. ▶ Arithmetic) */
 .group-toggle {
   cursor: pointer;
   font-weight: bold;
@@ -326,7 +332,7 @@ svg.flowchart-container {
   gap: 6px;
 }
 
-/* Eingeklappt/ausgeklapptes Untermenü */
+/* [Projekt-Erweiterung] Eingeklappt/ausgeklapptes Untermenü */
 .group-toggle > ul {
   margin-left: 20px; /* weniger Abstand beim Einrücken der Kinder */
   padding-left: 10px;
@@ -334,11 +340,11 @@ svg.flowchart-container {
   margin-bottom: 2px;
 }
 
-
+/* [Projekt-Erweiterung] Hover-Effekt für Gruppenüberschrift */
 .group-toggle:hover {
   background-color: #666;
 }
-
+/* [Projekt-Erweiterung] Pfeil-Symbol für die Gruppenüberschrift */
 .toggle-arrow {
   font-size: 12px;
   width: 12px;

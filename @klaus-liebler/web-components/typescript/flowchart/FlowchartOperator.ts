@@ -47,11 +47,11 @@ export abstract class FlowchartOperator {
     get OutputSvgG(): SVGGElement { return this.outputSvgG;}
     private debugInfoSvgText:SVGTextElement;
     private lastMouseDownDt:number=0;;
+
+    /*[Projekt-Erweiterung] Doppelklick zum Umbenennen*/
     private isSelected = false;
     private isDragging: boolean = false;
     private titleSvgText: SVGTextElement;
-
-
 
     get TypeInfo(){return this.typeInfo;}
 
@@ -69,7 +69,9 @@ export abstract class FlowchartOperator {
         this.MAX_INDEX=0;
     }
 
+    
     public ShowAsSelected(state: boolean) {
+        /*[Projekt-Erweiterung] Funktion, um den Selektionsstatus zu setzen*/
         console.log("ShowAsSelected", this.Caption, state);
         this.isSelected = state;
 
@@ -80,10 +82,10 @@ export abstract class FlowchartOperator {
         }
     }
     
-    
-public IsSelected(): boolean {
-    return this.isSelected;
-}
+    /*[Projekt-Erweiterung] Methode, um den Selektionsstatus abzufragen*/
+    public IsSelected(): boolean {
+        return this.isSelected;
+    }
 
     public SetDebugInfoText(text:string):void{
         this.debugInfoSvgText.textContent=text;
@@ -128,11 +130,12 @@ public IsSelected(): boolean {
         return;
     }
 
-    //Geiler neuer Dialog zum Umbenennen
+    /*[Projekt-Erweiterung] Methode, um den Umbenennungsdialog anzuzeigen*/
     public showRenameDialog(): void {
 
         
-    // Bestehendes Dialog-Fenster entfernen (wenn doppelt geöffnet)
+    
+    /*[Projekt-Erweiterung] Sicherstellen, dass nur ein Dialog geöffnet ist*/
     const existing = document.getElementById("rename-dialog");
     if (existing) existing.remove();
 
@@ -207,7 +210,7 @@ this.titleSvgText.textContent = caption;
 
 
         
-
+  /*[Projekt-Erweiterung] macht Doppelklick auf den Operator-Namen möglich, um den Umbenennungsdialog zu öffnen*/
   this.elementSvgG.addEventListener("click", (e) => {
     console.log("CLICK on elementSvgG", this.Caption);
 
@@ -233,65 +236,66 @@ this.titleSvgText.textContent = caption;
         
         
     }
-    
-RegisterDragging(startEvent: MouseEvent): void {
-    const startX = startEvent.clientX;
-    const startY = startEvent.clientY;
 
-    const flowchart = this.parent;
-    const selected = flowchart.GetSelectedOperators();
-    const isMultiSelect = selected.has(this);
+    /*[Projekt-Erweiterung] Methode, um das Ziehen des Operators zu registrieren und durchzuführen*/
+    RegisterDragging(startEvent: MouseEvent): void {
+        const startX = startEvent.clientX;
+        const startY = startEvent.clientY;
 
-    this.isDragging = false;
+        const flowchart = this.parent;
+        const selected = flowchart.GetSelectedOperators();
+        const isMultiSelect = selected.has(this);
 
-    // Positionen aller selektierten Operatoren merken
-    const originalPositions = new Map<FlowchartOperator, { x: number; y: number }>();
-    for (const op of selected) {
-        originalPositions.set(op, { x: op.Xpos, y: op.Ypos });
-    }
+        this.isDragging = false;
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
-        const dx = (moveEvent.clientX - startX) / flowchart.PositionRatio;
-        const dy = (moveEvent.clientY - startY) / flowchart.PositionRatio;
-
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-            this.isDragging = true;
+        // Positionen aller selektierten Operatoren merken
+        const originalPositions = new Map<FlowchartOperator, { x: number; y: number }>();
+        for (const op of selected) {
+            originalPositions.set(op, { x: op.Xpos, y: op.Ypos });
         }
 
-        if (isMultiSelect) {
-            for (const op of selected) {
-                const orig = originalPositions.get(op);
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            const dx = (moveEvent.clientX - startX) / flowchart.PositionRatio;
+            const dy = (moveEvent.clientY - startY) / flowchart.PositionRatio;
+
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                this.isDragging = true;
+            }
+
+            if (isMultiSelect) {
+                for (const op of selected) {
+                    const orig = originalPositions.get(op);
+                    if (orig) {
+                        op.MoveTo(orig.x + dx, orig.y + dy);
+                    }
+                }
+            } else {
+                const orig = originalPositions.get(this);
                 if (orig) {
-                    op.MoveTo(orig.x + dx, orig.y + dy);
+                    this.MoveTo(orig.x + dx, orig.y + dy);
                 }
             }
-        } else {
-            const orig = originalPositions.get(this);
-            if (orig) {
-                this.MoveTo(orig.x + dx, orig.y + dy);
-            }
-        }
-    };
+        };
 
-    const onMouseUp = () => {
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-    };
+        const onMouseUp = () => {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+        };
 
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-}
-
-
-
-    get Parent() { return this.parent };
-    get Caption() { return this.caption; }
-    set Caption(value: string) {
-    this.caption = value;
-    if (this.titleSvgText) {
-        this.titleSvgText.textContent = value;
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
     }
-}
+
+
+
+        get Parent() { return this.parent };
+        get Caption() { return this.caption; }
+        set Caption(value: string) {
+        this.caption = value;
+        if (this.titleSvgText) {
+            this.titleSvgText.textContent = value;
+        }
+    }
 
     get InputsKVIt(){return this.Inputs.entries()}
     get OutputsKVIt(){return this.Outputs.entries()}

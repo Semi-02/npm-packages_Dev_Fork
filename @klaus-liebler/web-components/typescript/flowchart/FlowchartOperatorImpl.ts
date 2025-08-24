@@ -56,6 +56,7 @@ export class OperatorRegistry{
         return ti;
     }
 
+    /*[Projekt-Erweiterung] Methode, die in der linken Seitenleiste die Operatoren anzeigt und da ein Klappmenü realisiert*/
     public populateOperatorLib(parent: HTMLDivElement, onmousedownHandler: (e:MouseEvent, ti:TypeInfo)=>any) { 
     let top = Html(parent, "ul", [], []);
     for (const kv of this.groupName2operatorName2Info.entries()) {
@@ -147,16 +148,12 @@ export class OperatorRegistry{
         r.Register(57, Output, "AnalogOutput0", PositionType.Output, SingletonType.Singleton, (p, ca, ti, co)=>new Output_AnalogOutput0Operator(p, ca, ti, co));
 
         r.Register(58, Sound, "Sound", PositionType.Output, SingletonType.Singleton, (p, ca, ti, co)=>new Sound_Sound(p, ca, ti, co));
-        
         r.Register(59, Control, "PID", PositionType.Default, SingletonType.Default, (p, ca, ti, co)=>new Control_PID(p, ca, ti, co));
+
+        /*[Projekt-Erweiterung] neue Makro-Operatoren für InputBlock und OutputBlock*/
         r.Register(60, Custom, "InputBlock"   , PositionType.Input, SingletonType.Default,    (p, ca, ti, co) => new Macro_InputBlockOperator(p, ca, ti, co));
         r.Register(61, Custom, "OutputBlock"  , PositionType.Output, SingletonType.Default,    (p, ca, ti, co) => new Macro_OutputBlockOperator(p, ca, ti, co));
-       // r.Register(62, Custom, "Macro"        , PositionType.Default,    SingletonType.Default,    (p, ca, ti, co) => new MacroOperator(p, ca, co, { operators: [], links: [] })
-
-
-
-
-        
+       
         //r.Register(100, Custom, "XYZXYZBlock", PositionType.Default, SingletonType.Default, (p, ca, ti, co)=>new Custom_XYZBlock(p, ca, ti, co))
         return r;
     }
@@ -1361,6 +1358,8 @@ export class Control_PID extends FlowchartOperator {
         this.AppendConnectors([this.inputSetpoint, this.inputFeedback], [this.output]);
     }
 }
+
+/*[Projekt-Erweiterung] Makros: Input- und Output-Block für Makro-Definitionen in Flowcharts */
 export class Macro_InputBlockOperator extends FlowchartOperator {
     private O: FlowchartOutputConnector;
     constructor(parent: Flowchart, caption: string, ti: TypeInfo, configurationData: KeyValueTuple[] | null) {
@@ -1377,6 +1376,7 @@ export class Macro_InputBlockOperator extends FlowchartOperator {
         ctx.SetFloat(this.O, 0); // oder ein Default-Wert aus Konfiguration
     }
 }
+/*[Projekt-Erweiterung] Makros: Input- und Output-Block für Makro-Definitionen in Flowcharts */
 export class Macro_OutputBlockOperator extends FlowchartOperator {
     private I: FlowchartInputConnector;
     constructor(parent: Flowchart, caption: string, ti: TypeInfo, configurationData: KeyValueTuple[] | null) {
@@ -1388,9 +1388,6 @@ this.ElementSvgG.ondblclick = (e) => {
 this.showRenameDialog();
 };
     }
-
-
-
     public OnSimulationStep(ctx: SimulationContext) {
         let val = ctx.GetFloat(this.I);
         //this.box.innerText = `${val}`;

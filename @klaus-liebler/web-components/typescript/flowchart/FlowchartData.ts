@@ -7,7 +7,7 @@ export interface FlowchartData {
     operators: OperatorData[];
     links: LinkData[];
 
-    //NEU!!!
+    /*[Projekt-Erweiterung] Exposed Inputs/Outputs*/
     exposedInputs?: {
         targetOperatorIndex: number;
         targetInput: number;
