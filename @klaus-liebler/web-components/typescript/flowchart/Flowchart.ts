@@ -138,6 +138,11 @@ export class Flowchart {
     private markerArrow: SVGPathElement | null = null;
     private markerCircle: SVGCircleElement | null = null;
 
+
+    // NEU: hält das geladene Macro-JSON
+    private macroDataByName: Map<string, FlowchartData> = new Map();
+
+
     private _svgCoordsFromEvent(e: MouseEvent): { x: number, y: number } {
         return { x: e.clientX, y: e.clientY };
     }
@@ -671,7 +676,7 @@ li.oncontextmenu = (e) => {
 
 
     // NEU in Flowchart
-private openMacrosFromLabathome(): void {
+private deleteMacrosFromLabathome(): void {
     fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY)
         .then(async response => {
             const text = await response.text();
@@ -880,7 +885,7 @@ private async deleteMacroFile(path: string) {
                         })),
                     new MenuItem("Create Macro from current selection", () => { }),
                     new MenuItem("Edit Macro", () => { }),
-                    new MenuItem("Delete Macro", () => this.openMacrosFromLabathome()),
+                    new MenuItem("Delete Macro", () => this.deleteMacrosFromLabathome()),
                     new MenuItem("Load Macro from PC", () => { }),
                     new MenuItem("Reload Macros from labathome", () => this.getMacroFileList())
                 ])
@@ -1020,10 +1025,32 @@ private async deleteMacroFile(path: string) {
         // 5) Superblock erzeugen & einfügen
         const title = name && name.trim() ? name.trim() : "CustomBlock";
         const macro = new MacroOperator(this, title, null, macroData);
-        macro.MoveTo(200, 120);
+        this._placeOperatorAtViewportCenter(macro);
         this.operators.set(macro.GlobalOperatorIndex, macro);
     }
 
+    /*[Projekt-Erweiterung] Findet die Mitte des Bildschirms*/
+    private _getViewportCenter(): { x: number, y: number } {
+        const scrollDiv = this.flowchartContainerSvgSvg.parentElement as HTMLDivElement; // = develop-workspace
+        const centerX = (scrollDiv.scrollLeft + scrollDiv.clientWidth / 2) / this.zoomLevel;
+        const centerY = (scrollDiv.scrollTop  + scrollDiv.clientHeight / 2) / this.zoomLevel;
+        return { x: centerX, y: centerY };
+    }
+
+    /*[Projekt-Erweiterung] Platziert Block in der Mitte des Bildschirms*/
+    private _placeOperatorAtViewportCenter(op: FlowchartOperator): void {
+        const { x: cx, y: cy } = this._getViewportCenter();
+
+        let targetX = cx, targetY = cy;
+        try {
+        const bbox = op.ElementSvgG.getBBox(); 
+        targetX = cx - bbox.width  / 2;
+        targetY = cy - bbox.height / 2;
+        } catch {
+        // Fallback: falls BBox noch nicht da ist, einfach Mittelpunkt nehmen
+        }
+        op.MoveTo(targetX, targetY);
+    }
 
     public async RenderUi(subcontainer: HTMLDivElement) {
         if (!subcontainer) throw new Error("container is null");
@@ -1289,17 +1316,7 @@ private async deleteMacroFile(path: string) {
             let caption = ti.OperatorName;
             let o = this.createOperatorInternal(ti.GlobalTypeIndex, caption, null);
 
-            //Blöcke auf richtige Position setzen
-            const scrollDiv = this.flowchartContainerSvgSvg.parentElement!; // = develop-workspace
-            const scrollLeft = scrollDiv.scrollLeft;
-            const scrollTop = scrollDiv.scrollTop;
-
-            const x = scrollLeft / this.zoomLevel + 100;
-            const y = scrollTop / this.zoomLevel + 100;
-
-            o.MoveTo(x, y);
-
-
+            this._placeOperatorAtViewportCenter(o);
 
             o.RegisterDragging(e);
             this.operators.set(o.GlobalOperatorIndex, o);
