@@ -113,7 +113,7 @@ export class Flowchart {
     get SelectedLink() { return this.selectedLink };
     get Options() { return this.options; }
 
-   /*[Projekt-Erweiterung] Zoomfunktion: Skalierungsebene wird gezoomt, Label zeigt Prozentzahl an*/
+    /*[Projekt-Erweiterung] Zoomfunktion: Skalierungsebene wird gezoomt, Label zeigt Prozentzahl an*/
     private zoomLevel: number = 1.0;
     private scalingLayer!: SVGGElement;
     private zoomLabel!: HTMLDivElement;
@@ -142,8 +142,7 @@ export class Flowchart {
     private markerCircle: SVGCircleElement | null = null;
 
 
-    // NEU: hält das geladene Macro-JSON
-    private macroDataByName: Map<string, FlowchartData> = new Map();
+    private macroSnapshots: Map<string, FlowchartData> = new Map();
 
 
     private _svgCoordsFromEvent(e: MouseEvent): { x: number, y: number } {
@@ -537,37 +536,37 @@ export class Flowchart {
     }
 
     private setMacroData(macroName: string, macroData: FlowchartData) {
-        // NICHT mehr direkt Operators/Links ins Flowchart einfügen
-        // sondern nur im Speicher halten
-        this.macros.set(macroName, [new Map(), new Map()]);
+        this.macroSnapshots.set(macroName, macroData);   // << Snapshot merken
         this.macrosNames.add(macroName);
         console.log(`Stored macro ${macroName}`);
         this.updateCustomBlocksMenu();
     }
 
+
+
     /*[Projekt-Erweiterung] Makro löschen: Datei löschen und aus interner Liste entfernen*/
     private updateCustomBlocksMenu() {
         // Get UI elements 
-        console.log( `UpdateCoustomMacros: ${this.macrosNames.size} `, this.macrosNames);
+        console.log(`UpdateCoustomMacros: ${this.macrosNames.size} `, this.macrosNames);
         const top = this.operatorLibDiv.querySelector("ul");
         let groupLi = top?.querySelector(".custom-blocks-group") as HTMLLIElement;
-    
+
         // Create the group container if it doesn't exist yet
         if (!groupLi) {
             groupLi = document.createElement("li");
             groupLi.classList.add("group-toggle", "custom-blocks-group");
-            
+
             const toggleIcon = document.createElement("span");
             toggleIcon.classList.add("toggle-arrow");
             toggleIcon.innerText = "▶";
-            
+
             const groupLabel = document.createElement("span");
             groupLabel.innerText = "CustomBlocks";
-            
+
             const ul = document.createElement("ul");
             ul.classList.add("nested");
             ul.style.display = "none";
-            
+
             groupLi.appendChild(toggleIcon);
             groupLi.appendChild(groupLabel);
             groupLi.appendChild(ul);
@@ -579,23 +578,23 @@ export class Flowchart {
                 toggleIcon.innerText = expanded ? "▶" : "▼";
             };
         }
-        
+
         // Clear and populate the list
         const ul = groupLi.querySelector("ul")!;
         ul.innerHTML = "";
-        
+
         // Use macrosNames instead of localStorage
         for (const macroName of this.macrosNames) {
             const li = document.createElement("li");
             li.classList.add("operator-lib-item");
             li.innerText = macroName;
-            
+
             li.onmousedown = async (e) => {
                 if (e.button !== 0) return;
                 // Check if the macro is already loaded
-                if (!this.macros.has(macroName)) {
+                if (!this.macroSnapshots.has(macroName)) {
                     // Load the macro file first
-                    await this.getMacroFile(FBDMACROSTORE_BASE_DIRECTORY + macroName + ".json", 
+                    await this.getMacroFile(FBDMACROSTORE_BASE_DIRECTORY + macroName + ".json",
                         // Success callback
                         () => {
                             // Now create the superblock
@@ -603,7 +602,7 @@ export class Flowchart {
                         },
                         // Failure callback
                         (path) => {
-                            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, 
+                            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR,
                                 `Failed to load macro "${macroName}" from ${path}`));
                         }
                     );
@@ -613,23 +612,23 @@ export class Flowchart {
                 }
             };
 
-    li.oncontextmenu = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+            li.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
 
-    const macroFile = `${FBDMACROSTORE_BASE_DIRECTORY}${macroName}.json`;
+                const macroFile = `${FBDMACROSTORE_BASE_DIRECTORY}${macroName}.json`;
 
-    this.appManagement.ShowDialog(new OkDialog(
-        Severity.WARN,
-        `Makro "${macroName}" wirklich löschen?`,
-        (ok) => {
-        if (!ok) return;                  // nur bei Bestätigung
-        this.deleteMacroFile(macroFile);  // <-- jetzt erst löschen
+                this.appManagement.ShowDialog(new OkDialog(
+                    Severity.WARN,
+                    `Makro "${macroName}" wirklich löschen?`,
+                    (ok) => {
+                        if (!ok) return;                  // nur bei Bestätigung
+                        this.deleteMacroFile(macroFile);  // <-- jetzt erst löschen
+                    }
+                ));
+            };
+            ul.appendChild(li);
         }
-    ));
-    };        
-        ul.appendChild(li);
-    }
     }
 
     /*[Projekt-Erweiterung] Makroliste vom Server holen und interne Liste aktualisieren*/
@@ -655,15 +654,15 @@ export class Flowchart {
                     }
                 }
                 if (!files.length) throw new Error("No files found");
-            
-                 //console.log(`Parsed files: ${files}`); // hier string drinnen vorhanden mit .json
+
+                //console.log(`Parsed files: ${files}`); // hier string drinnen vorhanden mit .json
 
                 files.forEach(f => {
                     const macroName = f.replace(/\.json$/, '');
                     this.macrosNames.add(macroName); //Namen ohne .json speichern
                     console.log(`Found macro file: ${macroName}`);
                 });
-                this.updateCustomBlocksMenu(); 
+                this.updateCustomBlocksMenu();
 
 
                 // ab hier ohne .json 
@@ -888,7 +887,7 @@ export class Flowchart {
                         })),
                     new MenuItem("Create Macro from current selection", () => { }),
                     new MenuItem("Edit Macro", () => { }),
-                    new MenuItem("Delete Macro", () => this.deleteMacrosFromLabathome()),
+                    new MenuItem("Delete Macro", () => this.openMacrosFromLabathome()),
                     new MenuItem("Load Macro from PC", () => { }),
                     new MenuItem("Reload Macros from labathome", () => this.getMacroFileList())
                 ])
@@ -896,7 +895,7 @@ export class Flowchart {
         );
         mm.Render(subcontainer)
     }
-    
+
     resetColorsAndCaptions() {
         this.operators.forEach(o => o.ResetColorsAndCaptions());
         this.links.forEach(l => l.SetCaption(""))
@@ -933,86 +932,81 @@ export class Flowchart {
 
 
     /*[Projekt-Erweiterung] Makro erstellen: aus aktuellen Operatoren und Links einen Superblock bauen */
-    private buildSuperblockFromCurrentAndPlace(name: string) {
-        //Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
-    
-        const isInputIface = (op: FlowchartOperator) =>
-            op.TypeInfo.OperatorName === "InputBlock" || /(^|\W)Input(\W|$)/i.test(op.TypeInfo.OperatorName);
+    // Flowchart.ts
+    private _buildMacroDataFromSnapshot(snapshot: FlowchartData) {
+        const isInputIfaceName = (name: string) => name === "InputBlock" || /(^|\W)Input(\W|$)/i.test(name);
+        const isOutputIfaceName = (name: string) => name === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(name);
 
-        const isOutputIface = (op: FlowchartOperator) =>
-            op.TypeInfo.OperatorName === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(op.TypeInfo.OperatorName);
-
-        // 1) interne Operatoren = alle außer den Interface-Blöcken
-        const internalOps: FlowchartOperator[] = [];
-        const ifaceOps = new Set<FlowchartOperator>();
-
-        for (const op of this.operators.values()) {
-            if (isInputIface(op) || isOutputIface(op)) ifaceOps.add(op);
-            else internalOps.push(op);
+        // 1) TypeInfos zuordnen, um Namen zu haben (keine DOM-Instanzen nötig)
+        const idx2meta = new Map<number, { name: string, d: (typeof snapshot.operators)[number] }>();
+        for (const d of snapshot.operators) {
+            const ti = this.operatorRegistry.GetTypeInfo(d.globalTypeIndex);
+            if (!ti) continue;
+            idx2meta.set(d.index, { name: ti.OperatorName, d });
         }
 
-        // 2) Operator-Daten (nur intern)
-        const operatorData = internalOps.map(op => ({
-            globalTypeIndex: op.TypeInfo.GlobalTypeIndex,
-            caption: op.Caption,
-            index: op.GlobalOperatorIndex,
-            posX: op.Xpos,
-            posY: op.Ypos,
-            configurationData: op.Config_Copy,
-        }));
+        // 2) interne vs. Interface-Operatoren trennen
+        const ifaceIdx = new Set<number>();
+        const internalOperators: typeof snapshot.operators = [];
+        for (const { d, name } of idx2meta.values()) {
+            if (isInputIfaceName(name) || isOutputIfaceName(name)) {
+                ifaceIdx.add(d.index);
+            } else {
+                internalOperators.push(d);
+            }
+        }
 
         // 3) Links klassifizieren
-        const macroLinks: { fromOperatorIndex: number; fromOutput: number; toOperatorIndex: number; toInput: number; }[] = [];
+        const macroLinks: Array<{ fromOperatorIndex: number; fromOutput: number; toOperatorIndex: number; toInput: number; }> = [];
         const exposedInputs: any[] = [];
         const exposedOutputs: any[] = [];
 
-        const pickType = (a: ConnectorType | null, b: ConnectorType | null): ConnectorType => {
-            if (a !== null && a !== undefined) return a as ConnectorType;
-            if (b !== null && b !== undefined) return b as ConnectorType;
-            // Fallback: sollte praktisch nicht passieren
-            return ConnectorType.FLOAT;
-        };
+        for (const l of snapshot.links) {
+            const from = idx2meta.get(l.fromOperatorIndex);
+            const to = idx2meta.get(l.toOperatorIndex);
+            if (!from || !to) continue;
 
-        for (const link of this.links.values()) {
-            const fromOp = link.From.Parent;
-            const toOp = link.To.Parent;
+            const fromIsIface = ifaceIdx.has(l.fromOperatorIndex);
+            const toIsIface = ifaceIdx.has(l.toOperatorIndex);
 
-            const fromIsIface = ifaceOps.has(fromOp);
-            const toIsIface = ifaceOps.has(toOp);
-
-            // Interne Links bleiben erhalten:
+            // interne Links bleiben erhalten
             if (!fromIsIface && !toIsIface) {
                 macroLinks.push({
-                    fromOperatorIndex: fromOp.GlobalOperatorIndex,
-                    fromOutput: link.From.LocalConnectorIndex,
-                    toOperatorIndex: toOp.GlobalOperatorIndex,
-                    toInput: link.To.LocalConnectorIndex,
+                    fromOperatorIndex: l.fromOperatorIndex,
+                    fromOutput: l.fromOutput,
+                    toOperatorIndex: l.toOperatorIndex,
+                    toInput: l.toInput,
                 });
                 continue;
             }
 
             // InputBlock => externes Input wird auf internen Eingang gemappt
-            if (isInputIface(fromOp) && !toIsIface) {
+            if (isInputIfaceName(from.name) && !toIsIface) {
+                // Falls du IO-Signaturen im TypeInfo hast, ersetze 'null' durch echte Typen:
+                // const srcType = this.operatorRegistry.GetTypeInfo(from.d.globalTypeIndex)?.Outputs[l.fromOutput]?.Type ?? null;
+                // const dstType = this.operatorRegistry.GetTypeInfo(to.d.globalTypeIndex)?.Inputs [l.toInput   ]?.Type ?? null;
+                const connectorType = null; // <— sicherer Fallback; MacroOperator kann selbst inferieren
                 exposedInputs.push({
-                    targetOperatorIndex: toOp.GlobalOperatorIndex,
-                    targetInput: link.To.LocalConnectorIndex,
-                    sourceName: fromOp.Caption,
-                    sourceOutput: link.From.LocalConnectorIndex,
-                    connectorType: pickType(link.From.Type, link.To.Type),
-                    connectorName: fromOp.Caption
+                    targetOperatorIndex: l.toOperatorIndex,
+                    targetInput: l.toInput,
+                    sourceName: from.d.caption,
+                    sourceOutput: l.fromOutput,
+                    connectorType,
+                    connectorName: from.d.caption,
                 });
                 continue;
             }
 
             // OutputBlock => externes Output liest von internem Ausgang
-            if (!fromIsIface && isOutputIface(toOp)) {
+            if (!fromIsIface && isOutputIfaceName(to.name)) {
+                const connectorType = null; // s.o.
                 exposedOutputs.push({
-                    sourceOperatorIndex: fromOp.GlobalOperatorIndex,
-                    sourceOutput: link.From.LocalConnectorIndex,
-                    targetName: toOp.Caption,
-                    targetInput: link.To.LocalConnectorIndex,
-                    connectorType: pickType(link.From.Type, link.To.Type),
-                    connectorName: toOp.Caption
+                    sourceOperatorIndex: l.fromOperatorIndex,
+                    sourceOutput: l.fromOutput,
+                    targetName: to.d.caption,
+                    targetInput: l.toInput,
+                    connectorType,
+                    connectorName: to.d.caption,
                 });
                 continue;
             }
@@ -1020,26 +1014,44 @@ export class Flowchart {
             // Interface↔Interface ignorieren
         }
 
-        // 4) MacroData zusammensetzen – NUR interne Ops + interne Links + explicit exposed IO
-        const macroData = {
-            operators: operatorData,
+        // 4) MacroData – nur interne Operatoren + interne Links + explizite IO
+        return {
+            operators: internalOperators.map(o => ({
+                globalTypeIndex: o.globalTypeIndex,
+                caption: o.caption,
+                index: o.index,
+                posX: o.posX,
+                posY: o.posY,
+                configurationData: o.configurationData,
+            })),
             links: macroLinks,
             exposedInputs,
             exposedOutputs,
         };
+    }
 
-        // 5) Superblock erzeugen & einfügen
+
+    private buildSuperblockFromCurrentAndPlace(name: string) {
         const title = name && name.trim() ? name.trim() : "CustomBlock";
+        const snapshot = this.macroSnapshots.get(title);
+
+        if (!snapshot) {
+            console.warn(`Macro snapshot for "${title}" not loaded yet.`);
+            return;
+        }
+
+        const macroData = this._buildMacroDataFromSnapshot(snapshot); // << pure Ableitung aus JSON
         const macro = new MacroOperator(this, title, null, macroData);
         this._placeOperatorAtViewportCenter(macro);
         this.operators.set(macro.GlobalOperatorIndex, macro);
     }
 
+
     /*[Projekt-Erweiterung] Findet die Mitte des Bildschirms*/
     private _getViewportCenter(): { x: number, y: number } {
         const scrollDiv = this.flowchartContainerSvgSvg.parentElement as HTMLDivElement; // = develop-workspace
         const centerX = (scrollDiv.scrollLeft + scrollDiv.clientWidth / 2) / this.zoomLevel;
-        const centerY = (scrollDiv.scrollTop  + scrollDiv.clientHeight / 2) / this.zoomLevel;
+        const centerY = (scrollDiv.scrollTop + scrollDiv.clientHeight / 2) / this.zoomLevel;
         return { x: centerX, y: centerY };
     }
 
@@ -1049,11 +1061,11 @@ export class Flowchart {
 
         let targetX = cx, targetY = cy;
         try {
-        const bbox = op.ElementSvgG.getBBox(); 
-        targetX = cx - bbox.width  / 2;
-        targetY = cy - bbox.height / 2;
+            const bbox = op.ElementSvgG.getBBox();
+            targetX = cx - bbox.width / 2;
+            targetY = cy - bbox.height / 2;
         } catch {
-        // Fallback: falls BBox noch nicht da ist, einfach Mittelpunkt nehmen
+            // Fallback: falls BBox noch nicht da ist, einfach Mittelpunkt nehmen
         }
         op.MoveTo(targetX, targetY);
     }
