@@ -1192,7 +1192,8 @@ private _buildMacroDataFromSnapshot(snapshot: FlowchartData) {
 
         /*[Projekt-Erweiterung] Zoom-Buttons */
         let zoomControls = <HTMLDivElement>Html(workspace, "div", [], ["zoom-controls"]);
-        let zoomInButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "+");
+        let zoomOutButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "-");
+        
 
         /*[Projekt-Erweiterung] Zoom-Level-Anzeige */
         this.zoomLabel = <HTMLDivElement>Html(zoomControls, "div", [], ["zoom-label"], `${Math.round(this.zoomLevel * 100)}%`);
@@ -1200,8 +1201,7 @@ private _buildMacroDataFromSnapshot(snapshot: FlowchartData) {
             this.zoomLevel = 1.0;
             this.applyZoom();
         };
-        let zoomOutButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "-");
-
+        let zoomInButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "+");
         /*[Projekt-Erweiterung] Zoom-Buttons CSS */
         zoomControls.style.position = "fixed";
         zoomControls.style.top = "78px";
@@ -1354,10 +1354,10 @@ private _buildMacroDataFromSnapshot(snapshot: FlowchartData) {
 
         /*[Projekt-Erweiterung] Tastatur-Shortcut: Strg + +/- zum Zoomen und ENTF zum Löschen */
         workspace.addEventListener("keydown", (e) => {
-            if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "=")) {
+            if (e.ctrlKey && (e.key === "+" || e.key === "-")) {
                 e.preventDefault(); //Blockiert den normalen Browser-Zoom
 
-                if (e.key === "+" || e.key === "=") {
+                if (e.key === "+") {
                     this.ZoomIn();
                 } else if (e.key === "-") {
                     this.ZoomOut();

@@ -391,7 +391,7 @@ header, footer {
 }
 /*[Projekt-Erweiterung] Navigation Styles*/
 nav {
-  background-color: var(--light-white);
+  background-color: var(--silver);
   height: 100%;
   padding: 10px 0;
 }
