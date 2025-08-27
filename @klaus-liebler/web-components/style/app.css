@@ -4,36 +4,19 @@
 
 :root {
   --celadon: #A6D49F;
-  --olivine: #9CB380;
   --caput: #522A27;
   --sinopia: #C73E1D;
   --satin: #C59849;
-  --timberwolf: #EADEDA;
-  --cinereous: #998888;
   --silver: #BFB8AD;
   --white: #ffffff;
+  --light-white: #efefef
+  --almost-black: #333;
   --black: #000000;
-   --color-primary: #A6D49F; /* Celadon */
-  --color-secondary: #9CB380; /* Olivine */
-  --color-accent: #C73E1D; /* Sinopia */
-  --color-bg: #EADEDA; /* Timberwolf */
-  --color-panel: #ffffff; /* Weiß für Kontrast */
-  --color-shadow: rgba(0, 0, 0, 0.1);
   --color-border: #ccc;
   --color-input-bg: #f9f9f9;
-  --color-input-border: #ccc;
-  --color-button: #998888; /* Cinereous */
-  --color-button-hover: #BFB8AD; /* Silver */
   --radius: 10px;
-  --shadow: 0 4px 8px var(--color-shadow);
+  --shadow: 0 4px 8px var(--black);
   --font-main: "Dosis", sans-serif;
-  --accent: #b4e0b4;
-  --neutral: #dcdcd5;
-  --highlight: #a6d49f;
-  --error: #ff6f61;
-  --bg: #fefefe;
-  --border: #ccc;
-  --text: #333;
 }
 * {
   box-sizing: border-box;
@@ -41,7 +24,7 @@
 
 @media (max-width:768px) {
   body {
-    font: 16px/1.5 "Dosis", sans-serif;
+    font: 16px/1.5 var(--font-main);
     padding: 0px;
     margin: 0px;
     overflow-x: hidden;
@@ -49,7 +32,7 @@
 
     >nav {
       overflow: hidden;
-      background: #333;
+      background:  var(--almost-black);
       position: relative;
       width: 100%;
       padding: 10px;
@@ -66,7 +49,7 @@
       }
 
       a {
-        color: white;
+        color: var(--white);;
         padding: 14px 16px;
         text-decoration: none;
         font-size: 17px;
@@ -75,8 +58,8 @@
 
 
       >a>i {
-        color: white;
-        background: #333;
+        color: var(--white);
+        background: var(--almost-black);
         display: block;
         position: absolute;
         right: 0px;
@@ -90,7 +73,7 @@
 
 @media (min-width:769px) {
   body {
-    font: 16px/1.5 "Dosis", sans-serif;
+    font: 16px/1.5 var(--font-main);
     width: 100vw;
     height: 100vh;
     display: grid;
@@ -117,14 +100,12 @@
         background-color: #f1f1f1;
         >li>a{
           display: block;
-          color: #000;
+          color: var(--black);
           padding: 8px 16px;
           text-decoration: none;
           display: flex;
           flex-direction: row;
           transition: color .2s ease-out;
-  
-          
   
           :nth-child(1) {
             width: 30px;
@@ -175,9 +156,6 @@
   margin: 0px;
 }
 
-
-
-
 @keyframes fadein {
   from {
     bottom: 0;
@@ -226,7 +204,6 @@ svg.iconsize {
 }
 
 
-
 td.minwidth {
   width: 1%;
   white-space: nowrap;
@@ -263,7 +240,7 @@ p {
   width: 80%;
   text-align: center;
   border: 2px outset #888;
-  background-color: #fff;
+  background-color: var(--white);
   border-radius: 10px;
   top: 20%;
   padding-left: 20px;
@@ -305,22 +282,22 @@ button.withsvg {
     height: 24px;
     width: 24px;
     path{
-      fill: #000;
+      fill: var(--black);
     }
   }
 }
 button.active{
   background-color: #007bff;
-  color: #fff;
+  color: var(--white);
   border-color: #007bff;
   >svg path{
     fill: #e4f70f;
   }
 }
 
-
+/*[Projekt-Erweiterung] Accordion Style*/
 .accordion {
-  background: var(--color-panel);
+  background: var(--white);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -328,12 +305,13 @@ button.active{
   transition: all 0.3s ease;
 }
 
+/*[Projekt-Erweiterung] Accordion Button Style*/
 .accordion button {
   display: flex;
   align-items: center;
   justify-content: space-between;
   background-color: #aaa8c7;
-  color: white;
+  color: var(--white);
   border: none;
   padding: 15px 20px;
   width: 100%;
@@ -342,107 +320,107 @@ button.active{
   font-weight: bold;
 }
 
+/*[Projekt-Erweiterung] Accordion Button Hover Style*/
 .accordion button:hover {
   background-color: #d2d2db;
 }
 
+/*[Projekt-Erweiterung] Accordion Content Style*/
 .accordion button input[type="button"] {
   margin-left: 10px;
   background-color: #e4e3ef;
-  color: rgb(0, 0, 0);
+  color: var(--black);
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 14px;
   cursor: pointer;
 }
-
+/*[Projekt-Erweiterung] Accordion Content Button Hover Style*/
 .accordion button input[type="button"]:hover {
   background-color:#8e8cad;
 }
-
+/*[Projekt-Erweiterung] Accordion Table Style*/
 .accordion table {
   width: 100%;
   border-collapse: collapse;
   background: var(--color-input-bg);
 }
-
+/*[Projekt-Erweiterung] Accordion Table Header Style*/
 .accordion thead {
-  background:#efefef;
-  color: #000;
+  background: var(--light-white);
+  color: var(--black);
 }
-
+/*[Projekt-Erweiterung] Accordion Table Cell Style*/
 .accordion th, .accordion td {
   padding: 12px 15px;
   border-bottom: 1px solid var(--color-border);
   text-align: left;
 }
-
+/*[Projekt-Erweiterung] Accordion First Column Style*/
 .accordion td:first-child {
   width: 200px;
   font-weight: bold;
 }
-
+/*[Projekt-Erweiterung] Accordion input and Select Style*/
 .accordion input[type="text"],
 .accordion select {
   width: 100%;
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid var(--color-input-border);
+  border: 1px solid var(--color-border);
   font-size: 14px;
 }
-
+/*[Projekt-Erweiterung] Accordion Checkbox Style*/
 .accordion input[type="checkbox"] {
   transform: scale(1.2);
 }
 
-
+/*[Projekt-Erweiterung] Body and General Styles*/
 body {
   font: 16px/1.5 "Dosis", sans-serif;
   margin: 0;
   padding: 0;
   color: var(--black);
 }
-
+/*[Projekt-Erweiterung] Header and Footer Styles*/
 header, footer {
   background-color: var(--satin);
   padding: 10px;
   text-align: center;
 }
-
+/*[Projekt-Erweiterung] Navigation Styles*/
 nav {
-  background-color: #efefef;
+  background-color: var(--light-white);
   height: 100%;
   padding: 10px 0;
 }
-
+/*[Projekt-Erweiterung] Navigation List Styles*/
 nav ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-
+/*[Projekt-Erweiterung] Navigation List Item Styles*/
 nav ul li a {
   display: block;
   padding: 10px 16px;
   color: var(--white);
   text-decoration: none;
   border-bottom: 1px solid var(--silver);
-  transition: color 0.3s ease;
-
-        
-        transition: color .2s ease-out;
-        background-color: #efefef;
+  transition: color 0.3s ease;     
+  transition: color .2s ease-out;
+  background-color: var(--light-white);
 }
-
+/*[Projekt-Erweiterung] Navigation List Item Hover Styles*/
 nav ul li a:hover {
   background-color: #9594a5;
 }
-
+/*[Projekt-Erweiterung] Main Content Styles*/
 main {
   background-color: var(--white);
 }
-
+/*[Projekt-Erweiterung] Heading Styles*/
 h1 {
   font-size: 24px;
   border-bottom: 3px solid #dcdcdc;;
@@ -456,37 +434,37 @@ table {
   width: 100%;
   margin: 20px 0;
   min-width: 400px;
-  background-color:#efefef;
+  background-color: var(--light-white);
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
 }
-
+/*[Projekt-Erweiterung] Farben gewechselt*/
 thead {
-  
+  background-color: #a96a15;
   color: var(--black);
   font-weight: bold;
 }
 
-td, th {
-  padding: 14px;
-  border-bottom: 1px solid var(--cinereous);
+td,
+th {
+  border-top: 1px solid #555555;
   text-align: left;
-  vertical-align: middle;
+  padding: 14px;
 }
-
+/*[Projekt-Erweiterung] Farben gewechselt*/
 tr:nth-child(odd) {
-  background-color: #dddddd;
+  background-color: #dad9e673;
 }
-
+/*[Projekt-Erweiterung] Farben gewechselt*/
 tr:nth-child(even) {
-  background-color: #dddddd;
+  background-color: var(--white);
 }
 
 tr:last-child td {
   border-bottom: none;
 }
-
+/*[Projekt-Erweiterung] Input Field Styles*/
 input[type="button"] {
   background-color: #aaa8c7;;
   color: var(--white);
@@ -495,15 +473,15 @@ input[type="button"] {
   border-radius: 8px;
   font-weight: bold;
   transition: background-color 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px var(--black);
 }
-
+/*[Projekt-Erweiterung] Input Field Hover Styles*/
 input[type="button"]:hover {
   background-color:  #87869d;;
   transform: translateY(-1px);
   cursor: pointer;
 }
-
+/*[Projekt-Erweiterung] Button Styles*/
 .buttons {
   display: flex;
   gap: 15px;
@@ -517,7 +495,7 @@ input[type="button"]:hover {
   background-color: var(--caput);
   color: var(--white);
   text-align: center;
-  border-radius: 4px;
+  border-radius: 4px; /* größerer Radius */
   padding: 16px;
   position: fixed;
   z-index: 1;

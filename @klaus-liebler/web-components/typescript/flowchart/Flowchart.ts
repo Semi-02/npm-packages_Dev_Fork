@@ -21,6 +21,7 @@ const FBDSTORE_BASE_DIRECTORY = "/spiffs/fbdstore/";
 const DEFAULTFBD_FBD_FILEPATH = "/spiffs/defaultfbd.fbd";
 const TEMPFBD_FBD_FILEPATH = "/spiffs/tempfbd.fbd";
 
+/*[Projekt-Erweiterung] Makrospeicher*/
 const FBDMACROSTORE_BASE_DIRECTORY = "/spiffs/macrostore/";
 
 export class FlowchartOptions {
@@ -97,7 +98,7 @@ export class Flowchart {
     private operators = new Map<number, FlowchartOperator>();
     private links = new Map<number, FlowchartLink>();
 
-
+    /*[Projekt-Erweiterung] Makrolisten um Makros zu speichern*/
     private macros = new Map<string, [Map<number, FlowchartOperator>, Map<number, FlowchartLink>]>();
     private macrosNames = new Set<string>();
 
@@ -112,13 +113,15 @@ export class Flowchart {
     get SelectedLink() { return this.selectedLink };
     get Options() { return this.options; }
 
+   /*[Projekt-Erweiterung] Zoomfunktion: Skalierungsebene wird gezoomt, Label zeigt Prozentzahl an*/
     private zoomLevel: number = 1.0;
     private scalingLayer!: SVGGElement;
     private zoomLabel!: HTMLDivElement;
+    /*[Projekt-Erweiterung] Auswahlbox*/
     private selectionBoxDiv: HTMLDivElement | null = null;
     private selectionStart: { x: number, y: number } | null = null;
 
-
+    /*[Projekt-Erweiterung] PositionRatio für Zoom und Koordinatenumrechnung*/
     private positionRatio: number = 1;
     get PositionRatio() { return this.positionRatio; }
 
@@ -339,6 +342,7 @@ export class Flowchart {
         }
     }
 
+    /*[Projekt-Erweiterung] Flowchart-Datei erstellen mit Binär- und JSON-Teil*/
     private createFlowchartDataJSONString(): string {
         let operators: OperatorData[] = [];
         let links: LinkData[] = [];
@@ -443,7 +447,7 @@ export class Flowchart {
             if (onFailAction) onFailAction(path);
         }
     }
-
+    /*[Projekt-Erweiterung] Makro erstellen aus internem FlowchartData*/
     private createMacroFile(): string {
         const allOperators = Array.from(this.operators.values());
 
@@ -470,13 +474,14 @@ export class Flowchart {
         return macroDataJson;
     }
 
+    /*[Projekt-Erweiterung] Makro speichern: Dateinamen abfragen und Datei posten*/
     private async enterFilenameAndPostMacroFile(path: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
         this.appManagement.ShowDialog(new FilenameDialog("Enter macro name (without extension)", (ok: boolean, filename: string) => {
             if (!ok) return;
             this.postMacroFileInternal(path + filename + ".json", onSuccessAction, onFailAction);
         }));
     }
-
+    /*[Projekt-Erweiterung] Makro speichern: Datei posten*/
     private async postMacroFileInternal(fullPath: string, onSuccessAction?: (path: string) => void, onFailAction?: (path: string) => void) {
         try {
             const response = await fetch(this.options.httpServerBasePath + fullPath, {
@@ -531,104 +536,103 @@ export class Flowchart {
         }
     }
 
-private setMacroData(macroName: string, macroData: FlowchartData) {
-    // ❌ NICHT mehr direkt Operators/Links ins Flowchart einfügen
-    // sondern nur im Speicher halten
-    this.macros.set(macroName, [new Map(), new Map()]);
-    this.macrosNames.add(macroName);
-    console.log(`Stored macro ${macroName}`);
-    this.updateCustomBlocksMenu();
-}
-
-private updateCustomBlocksMenu() {
-    // Get UI elements 
-    console.log( `UpdateCoustomMacros: ${this.macrosNames.size} `, this.macrosNames);
-    const top = this.operatorLibDiv.querySelector("ul");
-    let groupLi = top?.querySelector(".custom-blocks-group") as HTMLLIElement;
-   
-    // Create the group container if it doesn't exist yet
-    if (!groupLi) {
-        groupLi = document.createElement("li");
-        groupLi.classList.add("group-toggle", "custom-blocks-group");
-        
-        const toggleIcon = document.createElement("span");
-        toggleIcon.classList.add("toggle-arrow");
-        toggleIcon.innerText = "▶";
-        
-        const groupLabel = document.createElement("span");
-        groupLabel.innerText = "CustomBlocks";
-        
-        const ul = document.createElement("ul");
-        ul.classList.add("nested");
-        ul.style.display = "none";
-        
-        groupLi.appendChild(toggleIcon);
-        groupLi.appendChild(groupLabel);
-        groupLi.appendChild(ul);
-        top?.appendChild(groupLi);
-
-        groupLi.onclick = () => {
-            const expanded = ul.style.display === "block";
-            ul.style.display = expanded ? "none" : "block";
-            toggleIcon.innerText = expanded ? "▶" : "▼";
-        };
+    private setMacroData(macroName: string, macroData: FlowchartData) {
+        // NICHT mehr direkt Operators/Links ins Flowchart einfügen
+        // sondern nur im Speicher halten
+        this.macros.set(macroName, [new Map(), new Map()]);
+        this.macrosNames.add(macroName);
+        console.log(`Stored macro ${macroName}`);
+        this.updateCustomBlocksMenu();
     }
+
+    /*[Projekt-Erweiterung] Makro löschen: Datei löschen und aus interner Liste entfernen*/
+    private updateCustomBlocksMenu() {
+        // Get UI elements 
+        console.log( `UpdateCoustomMacros: ${this.macrosNames.size} `, this.macrosNames);
+        const top = this.operatorLibDiv.querySelector("ul");
+        let groupLi = top?.querySelector(".custom-blocks-group") as HTMLLIElement;
     
-    // Clear and populate the list
-    const ul = groupLi.querySelector("ul")!;
-    ul.innerHTML = "";
-    
-    // Use macrosNames instead of localStorage
-    for (const macroName of this.macrosNames) {
-        const li = document.createElement("li");
-        li.classList.add("operator-lib-item");
-        li.innerText = macroName;
+        // Create the group container if it doesn't exist yet
+        if (!groupLi) {
+            groupLi = document.createElement("li");
+            groupLi.classList.add("group-toggle", "custom-blocks-group");
+            
+            const toggleIcon = document.createElement("span");
+            toggleIcon.classList.add("toggle-arrow");
+            toggleIcon.innerText = "▶";
+            
+            const groupLabel = document.createElement("span");
+            groupLabel.innerText = "CustomBlocks";
+            
+            const ul = document.createElement("ul");
+            ul.classList.add("nested");
+            ul.style.display = "none";
+            
+            groupLi.appendChild(toggleIcon);
+            groupLi.appendChild(groupLabel);
+            groupLi.appendChild(ul);
+            top?.appendChild(groupLi);
+
+            groupLi.onclick = () => {
+                const expanded = ul.style.display === "block";
+                ul.style.display = expanded ? "none" : "block";
+                toggleIcon.innerText = expanded ? "▶" : "▼";
+            };
+        }
         
-        li.onmousedown = async (e) => {
-             if (e.button !== 0) return;
-            // Check if the macro is already loaded
-            if (!this.macros.has(macroName)) {
-                // Load the macro file first
-                await this.getMacroFile(FBDMACROSTORE_BASE_DIRECTORY + macroName + ".json", 
-                    // Success callback
-                    () => {
-                        // Now create the superblock
-                        this.buildSuperblockFromCurrentAndPlace(macroName);
-                    },
-                    // Failure callback
-                    (path) => {
-                        this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, 
-                            `Failed to load macro "${macroName}" from ${path}`));
-                    }
-                );
-            } else {
-                // Macro is already loaded, just create the superblock
-                this.buildSuperblockFromCurrentAndPlace(macroName);
-            }
-        };
-
-li.oncontextmenu = (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-
-  const macroFile = `${FBDMACROSTORE_BASE_DIRECTORY}${macroName}.json`;
-
-  this.appManagement.ShowDialog(new OkDialog(
-    Severity.WARN,
-    `Makro "${macroName}" wirklich löschen?`,
-    (ok) => {
-      if (!ok) return;                  // ✅ nur bei Bestätigung
-      this.deleteMacroFile(macroFile);  // <-- jetzt erst löschen
-    }
-  ));
-};
-
-
+        // Clear and populate the list
+        const ul = groupLi.querySelector("ul")!;
+        ul.innerHTML = "";
         
+        // Use macrosNames instead of localStorage
+        for (const macroName of this.macrosNames) {
+            const li = document.createElement("li");
+            li.classList.add("operator-lib-item");
+            li.innerText = macroName;
+            
+            li.onmousedown = async (e) => {
+                if (e.button !== 0) return;
+                // Check if the macro is already loaded
+                if (!this.macros.has(macroName)) {
+                    // Load the macro file first
+                    await this.getMacroFile(FBDMACROSTORE_BASE_DIRECTORY + macroName + ".json", 
+                        // Success callback
+                        () => {
+                            // Now create the superblock
+                            this.buildSuperblockFromCurrentAndPlace(macroName);
+                        },
+                        // Failure callback
+                        (path) => {
+                            this.appManagement.ShowDialog(new OkDialog(Severity.ERROR, 
+                                `Failed to load macro "${macroName}" from ${path}`));
+                        }
+                    );
+                } else {
+                    // Macro is already loaded, just create the superblock
+                    this.buildSuperblockFromCurrentAndPlace(macroName);
+                }
+            };
+
+    li.oncontextmenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const macroFile = `${FBDMACROSTORE_BASE_DIRECTORY}${macroName}.json`;
+
+    this.appManagement.ShowDialog(new OkDialog(
+        Severity.WARN,
+        `Makro "${macroName}" wirklich löschen?`,
+        (ok) => {
+        if (!ok) return;                  // nur bei Bestätigung
+        this.deleteMacroFile(macroFile);  // <-- jetzt erst löschen
+        }
+    ));
+    };        
         ul.appendChild(li);
     }
     }
 
+    /*[Projekt-Erweiterung] Makroliste vom Server holen und interne Liste aktualisieren*/
     private async getMacroFileList() {
         // Hole die Dateiliste vom Server
         fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY)
@@ -656,10 +660,10 @@ li.oncontextmenu = (e) => {
 
                 files.forEach(f => {
                     const macroName = f.replace(/\.json$/, '');
-                    this.macrosNames.add(macroName); // ✅ HINZUFÜGEN zur Menge
+                    this.macrosNames.add(macroName); //Namen ohne .json speichern
                     console.log(`Found macro file: ${macroName}`);
                 });
-                this.updateCustomBlocksMenu(); // ✅ Menüliste aktualisieren
+                this.updateCustomBlocksMenu(); 
 
 
                 // ab hier ohne .json 
@@ -675,78 +679,76 @@ li.oncontextmenu = (e) => {
     }
 
 
-    // NEU in Flowchart
-private deleteMacrosFromLabathome(): void {
-    fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY)
-        .then(async response => {
-            const text = await response.text();
+    /*[Projekt-Erweiterung] Makro öffnen: Dateiliste vom Server holen und Dialog anzeigen*/
+    private openMacrosFromLabathome(): void {
+        fetch(this.options.httpServerBasePath + FBDMACROSTORE_BASE_DIRECTORY)
+            .then(async response => {
+                const text = await response.text();
 
-            let files: string[] = [];
-            try {
-                const data = JSON.parse(text);
-                files = (data.files as string[]).filter(f => f.endsWith(".json"));
-            } catch (e) {
-                const match = text.match(/'files':\s*\[([^\]]*)\]/);
-                if (match) {
-                    files = match[1]
-                        .split(',')
-                        .map(s => s.replace(/['"\s]/g, ''))
-                        .filter(f => f.endsWith('.json'));
+                let files: string[] = [];
+                try {
+                    const data = JSON.parse(text);
+                    files = (data.files as string[]).filter(f => f.endsWith(".json"));
+                } catch (e) {
+                    const match = text.match(/'files':\s*\[([^\]]*)\]/);
+                    if (match) {
+                        files = match[1]
+                            .split(',')
+                            .map(s => s.replace(/['"\s]/g, ''))
+                            .filter(f => f.endsWith('.json'));
+                    }
                 }
-            }
 
-            if (!files.length) throw new Error("No files found");
+                if (!files.length) throw new Error("No files found");
 
-            this.appManagement.ShowDialog(new FilelistDialog(
-                files,
-                // Öffnen: (hier könntest du optional direkt Superblock einfügen)
-                (ok, filename) => {
-                    if (!ok) return;
-                    const fullPath = `${FBDMACROSTORE_BASE_DIRECTORY}${filename}`;
+                this.appManagement.ShowDialog(new FilelistDialog(
+                    files,
+                    // Öffnen: (hier könntest du optional direkt Superblock einfügen)
+                    (ok, filename) => {
+                        if (!ok) return;
+                        const fullPath = `${FBDMACROSTORE_BASE_DIRECTORY}${filename}`;
 
-                    // Nur Superblock einfügen, keine Ursprungsblöcke:
-                    this.getMacroFile(fullPath, () => {
-                        const name = this._basenameNoExt(filename);
-                        this.buildSuperblockFromCurrentAndPlace(name);
-                    });
-                },
-                // Löschen:
-                (ok, filename) => {
-                    if (!ok) return;
-                    this.deleteMacroFile(`${FBDMACROSTORE_BASE_DIRECTORY}${filename}`);
-                }
-            ));
-        })
-        .catch(error => {
-            this.appManagement.ShowDialog(new OkDialog(
-                Severity.ERROR,
-                `Fehler beim Laden der Dateiliste: ${error.message}`
-            ));
-        });
-}
-
-
-    // NEU in Flowchart
-private async deleteMacroFile(path: string) {
-    try {
-        const response = await fetch(this.options.httpServerBasePath + path, { method: 'DELETE' });
-        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-
-        // Aus internen Strukturen entfernen
-        const name = this._basenameNoExt(path);
-        this.macros.delete(name);
-        this.macrosNames.delete(name);
-
-        // UI aktualisieren
-        this.updateCustomBlocksMenu();
-
-        this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei ${path} gelöscht`);
-    } catch (error: any) {
-        this.appManagement.ShowSnackbar(Severity.ERROR, `Fehler beim Löschen: ${error.message}`);
+                        // Nur Superblock einfügen, keine Ursprungsblöcke:
+                        this.getMacroFile(fullPath, () => {
+                            const name = this._basenameNoExt(filename);
+                            this.buildSuperblockFromCurrentAndPlace(name);
+                        });
+                    },
+                    // Löschen:
+                    (ok, filename) => {
+                        if (!ok) return;
+                        this.deleteMacroFile(`${FBDMACROSTORE_BASE_DIRECTORY}${filename}`);
+                    }
+                ));
+            })
+            .catch(error => {
+                this.appManagement.ShowDialog(new OkDialog(
+                    Severity.ERROR,
+                    `Fehler beim Laden der Dateiliste: ${error.message}`
+                ));
+            });
     }
-}
 
 
+    /*[Projekt-Erweiterung] Makro löschen: Datei löschen und aus interner Liste entfernen*/
+    private async deleteMacroFile(path: string) {
+        try {
+            const response = await fetch(this.options.httpServerBasePath + path, { method: 'DELETE' });
+            if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+
+            // Aus internen Strukturen entfernen
+            const name = this._basenameNoExt(path);
+            this.macros.delete(name);
+            this.macrosNames.delete(name);
+
+            // UI aktualisieren
+            this.updateCustomBlocksMenu();
+
+            this.appManagement.ShowSnackbar(Severity.SUCCESS, `Datei ${path} gelöscht`);
+        } catch (error: any) {
+            this.appManagement.ShowSnackbar(Severity.ERROR, `Fehler beim Löschen: ${error.message}`);
+        }
+    }
 
     private async getFbdFile(path: string) {
         try {
@@ -876,6 +878,7 @@ private async deleteMacroFile(path: string) {
                         this.flowchartContainerSvgSvg.classList.add("edit");
                     })
                 ]),
+                /*[Projekt-Erweiterung] Makro-Menu */
                 new Menu("Macro", [
                     new MenuItem("Create Macro", () => this.enterFilenameAndPostMacroFile(FBDMACROSTORE_BASE_DIRECTORY,
                         (fullPath: string) => {
@@ -893,11 +896,14 @@ private async deleteMacroFile(path: string) {
         );
         mm.Render(subcontainer)
     }
+    
     resetColorsAndCaptions() {
         this.operators.forEach(o => o.ResetColorsAndCaptions());
         this.links.forEach(l => l.SetCaption(""))
         this.links.forEach(l => l.UnsetColor())
     }
+
+    /*[Projekt-Erweiterung] Zoom-Funktionalität */
     public ZoomIn() {
         this.zoomLevel *= 1.1; // z.B. +10%
         this.applyZoom();
@@ -913,7 +919,7 @@ private async deleteMacroFile(path: string) {
         this.scalingLayer.setAttribute("transform", `scale(${this.zoomLevel})`);
         this.positionRatio = this.zoomLevel;
 
-        // 💡 Größe des SVGs basierend auf Zoom-Level setzen:
+        //Größe des SVGs basierend auf Zoom-Level setzen:
         const baseWidth = 3000;
         const baseHeight = 2000;
         this.flowchartContainerSvgSvg.setAttribute("width", `${baseWidth * this.zoomLevel}`);
@@ -926,9 +932,9 @@ private async deleteMacroFile(path: string) {
 
 
 
-    //NEU!!!!!!!!!!!! von Kawi
+    /*[Projekt-Erweiterung] Makro erstellen: aus aktuellen Operatoren und Links einen Superblock bauen */
     private buildSuperblockFromCurrentAndPlace(name: string) {
-        // 🧠 Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
+        //Interface-Erkennung (passe die Namen an, falls deine Blöcke anders heißen)
     
         const isInputIface = (op: FlowchartOperator) =>
             op.TypeInfo.OperatorName === "InputBlock" || /(^|\W)Input(\W|$)/i.test(op.TypeInfo.OperatorName);
@@ -1064,6 +1070,7 @@ private async deleteMacroFile(path: string) {
 
         this.flowchartContainerSvgSvg = <SVGSVGElement>Svg(workspace, "svg", ["width", "100%", "height", "100%"], ["flowchart-container", "edit"]);
 
+        /*[Projekt-Erweiterung] Lasso-Auswahl mit Rechteck */
         this.selectionBoxDiv = document.createElement("div");
         this.selectionBoxDiv.style.position = "absolute";
         this.selectionBoxDiv.style.border = "1px dashed #666";
@@ -1072,8 +1079,10 @@ private async deleteMacroFile(path: string) {
         this.selectionBoxDiv.style.display = "none";
         workspace.appendChild(this.selectionBoxDiv);
 
+        /*[Projekt-Erweiterung] scalingLayer für Zoom */
         this.scalingLayer = <SVGGElement>Svg(this.flowchartContainerSvgSvg, "g", [], ["scaling-layer"]);
 
+        /*[Projekt-Erweiterung] Hintergrundraster */
         const gridDefs = Svg(this.scalingLayer, "defs", []);
         const pattern = Svg(gridDefs, "pattern", [
             "id", "grid-pattern",
@@ -1105,19 +1114,19 @@ private async deleteMacroFile(path: string) {
         this.operatorsLayer = <SVGGElement>Svg(this.scalingLayer, "g", [], ["flowchart-operators-layer", "unselectable"]);
         this.tempLayer = <SVGSVGElement>Svg(this.scalingLayer, "g", [], ["flowchart-temporary-link-layer"]);
 
-        //Button hinzugefügt !!!!!
+        /*[Projekt-Erweiterung] Zoom-Buttons */
         let zoomControls = <HTMLDivElement>Html(workspace, "div", [], ["zoom-controls"]);
         let zoomInButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "+");
 
-        // Prozent-Anzeige links
+        /*[Projekt-Erweiterung] Zoom-Level-Anzeige */
         this.zoomLabel = <HTMLDivElement>Html(zoomControls, "div", [], ["zoom-label"], `${Math.round(this.zoomLevel * 100)}%`);
         this.zoomLabel.onclick = () => {
             this.zoomLevel = 1.0;
             this.applyZoom();
         };
-
         let zoomOutButton = <HTMLButtonElement>Html(zoomControls, "button", [], [], "-");
-        // Positionieren
+
+        /*[Projekt-Erweiterung] Zoom-Buttons CSS */
         zoomControls.style.position = "fixed";
         zoomControls.style.top = "78px";
         zoomControls.style.right = "50px";
@@ -1128,8 +1137,6 @@ private async deleteMacroFile(path: string) {
 
         zoomInButton.onclick = () => this.ZoomIn();
         zoomOutButton.onclick = () => this.ZoomOut();
-
-
 
         this.tempLayer.style.visibility = "hidden";//visible
         let defs = Svg(this.tempLayer, "defs", []);
@@ -1144,8 +1151,7 @@ private async deleteMacroFile(path: string) {
         this.operatorLibDiv = <HTMLDivElement>Html(subcontainer, "div", [], ["flowchart-operatorlibdiv", "unselectable"]);
 
 
-        // Button erstellen
-        // Links neben Workspace eine eigene Spalte für den Button
+        /*[Projekt-Erweiterung] Operator-Library linke Sidebar mit den Operatoren */
         const buttonContainer = document.createElement("div");
         buttonContainer.classList.add("operator-button-container"); // <-- neue Klasse
         const toggleButton = document.createElement("button");
@@ -1154,17 +1160,13 @@ private async deleteMacroFile(path: string) {
         buttonContainer.appendChild(toggleButton);
         subcontainer.appendChild(buttonContainer); // <-- direkt in die skalierbare Zeichenfläche!
 
-        // Öffnet die Sidebar bei Hover
+        /*[Projekt-Erweiterung] Operator-Library, linke Sidebar mit den Operatoren öffnet sich mit Klick auf Button */
         buttonContainer.addEventListener("mouseenter", () => {
             this.operatorLibDiv.classList.add("visible");
         });
         this.operatorLibDiv.addEventListener("mouseleave", () => {
             this.operatorLibDiv.classList.remove("visible");
         });
-
-
-
-
 
         //let toolsRect= <SVGRectElement>$.Svg(this.operatorLibDiv, "rect", ["width","140", "height", "100%", "rx", "10", "ry", "10"], ["tools-container"]);
 
@@ -1175,6 +1177,7 @@ private async deleteMacroFile(path: string) {
         //The mouseout event triggers when the mouse pointer leaves any child elements as well the selected element.
         //The mouseleave event is only triggered when the mouse pointer leaves the selected element.
 
+        /*[Projekt-Erweiterung] Mausdown-Event für Lasso-Auswahl */
         this.flowchartContainerSvgSvg.addEventListener("mousedown", (e) => {
             if (e.button !== 0 || this.mode !== FlowchartMode.EDIT) return;
 
@@ -1195,7 +1198,7 @@ private async deleteMacroFile(path: string) {
         });
 
 
-
+        /*[Projekt-Erweiterung] Mausmove-Event für Lasso-Auswahl */
         document.addEventListener("mousemove", (e) => {
             if (!this.selectionStart) return;
 
@@ -1216,7 +1219,7 @@ private async deleteMacroFile(path: string) {
             });
         });
 
-
+        /*[Projekt-Erweiterung] Mausup-Event für Lasso-Auswahl und Shift-Additiv-Auswahl */
         document.addEventListener("mouseup", (e) => {
             if (!this.selectionStart) return;
             this.selectionBoxDiv!.style.display = "none";
@@ -1265,7 +1268,7 @@ private async deleteMacroFile(path: string) {
             }
         });
 
-
+        /*[Projekt-Erweiterung] Klick auf Hintergrund = alles deselektieren */
         this.flowchartContainerSvgSvg.addEventListener("click", (e: MouseEvent) => {
             if (e.target !== this.flowchartContainerSvgSvg) return;
             this.UnselectAllOperators();
@@ -1273,10 +1276,10 @@ private async deleteMacroFile(path: string) {
         });
 
 
-
+        /*[Projekt-Erweiterung] Tastatur-Shortcut: Strg + +/- zum Zoomen und ENTF zum Löschen */
         workspace.addEventListener("keydown", (e) => {
             if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "=")) {
-                e.preventDefault(); // 🔒 Blockiert den normalen Browser-Zoom
+                e.preventDefault(); //Blockiert den normalen Browser-Zoom
 
                 if (e.key === "+" || e.key === "=") {
                     this.ZoomIn();
@@ -1292,6 +1295,7 @@ private async deleteMacroFile(path: string) {
             }
         });
 
+        /*[Projekt-Erweiterung] Zoom mit Touchpad oder Mausrad + Strg */
         this.flowchartContainerSvgSvg.addEventListener("wheel", (event) => {
             // Optional: nur im Edit-Modus
             if (this.mode !== FlowchartMode.EDIT) return;
@@ -1312,6 +1316,7 @@ private async deleteMacroFile(path: string) {
             }
         }, { passive: false }); // passive: false ist wichtig für preventDefault()
 
+        /*[Projekt-Erweiterung] Platzierung neuer Operatoren anhand Scrollposition */
         this.operatorRegistry.populateOperatorLib(this.operatorLibDiv, (e: MouseEvent, ti: TypeInfo) => {
             let caption = ti.OperatorName;
             let o = this.createOperatorInternal(ti.GlobalTypeIndex, caption, null);

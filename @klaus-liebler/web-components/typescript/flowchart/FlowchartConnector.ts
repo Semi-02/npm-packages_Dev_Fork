@@ -26,6 +26,7 @@ export abstract class FlowchartConnector {
     protected connector:SVGElement;
     protected connectorGroup:SVGGElement;
 
+    /* [Projekt-Erweiterung] Unterstützung für dynamische Connector-Typen */
     private isTypeDynamic = false;
 
 
@@ -33,13 +34,13 @@ export abstract class FlowchartConnector {
     public HasLink = (globalLinkIndex: number) => this.links.has(globalLinkIndex);
     public AddLink = (link: FlowchartLink) => this.links.set(link.GlobalLinkIndex, link);
 
-
+    /*[Projekt-Erweiterung] Dynamische Typ-Rücksetzung bei Entfernen letzter Verbindung */
     public RemoveLink = (link: FlowchartLink) => {
-    this.links.delete(link.GlobalLinkIndex);
+        this.links.delete(link.GlobalLinkIndex);
 
-    // 🔄 Wenn keine Verbindungen mehr da sind, und Typ war dynamisch → zurücksetzen
-    if (this.links.size === 0 && this.isTypeDynamic) {
-        this.ResetType();
+        //Wenn keine Verbindungen mehr da sind, und Typ war dynamisch → zurücksetzen
+        if (this.links.size === 0 && this.isTypeDynamic) {
+            this.ResetType();
     }
 }
 
@@ -66,6 +67,7 @@ export abstract class FlowchartConnector {
         let spec = this.getIOSpecifics();
         let translateY = TRANSLATEY*spec.parent.childElementCount;
         this.element = <SVGGElement>Svg(spec.parent, "g", ["transform", `translate(0 ${translateY})`], [`operator-${spec.inputOrOutput}`]);
+        /*[Projekt-Erweiterung] Connector-Typ als Attribut für UI-Styling */
         this.element.setAttribute("data-connector-datatype", typeof ConnectorType[type] === "string"
   ? ConnectorType[type]
   : `TYPE${type}`
@@ -100,27 +102,29 @@ export abstract class FlowchartConnector {
     get Type(): ConnectorType | null { return this.type; }
 
 
-    // Setzt den Typ des Connectors, wenn er noch nicht gesetzt ist
-public SetType(newType: ConnectorType) {
-    if (this.type !== null) return;
-    this.type = newType;
-    this.isTypeDynamic = true;
+   
+    /*[Projekt-Erweiterung] Setzen des Typs nur, wenn noch keiner gesetzt ist */
+    public SetType(newType: ConnectorType) {
+        if (this.type !== null) return;
+        this.type = newType;
+        this.isTypeDynamic = true;
 
-    const cssClass = ConnectorType[newType];
-    this.connector.classList.add(cssClass);
-    this.element.setAttribute("data-connector-datatype", cssClass);
-}
+        const cssClass = ConnectorType[newType];
+        this.connector.classList.add(cssClass);
+        this.element.setAttribute("data-connector-datatype", cssClass);
+    }
 
-public ResetType() {
-    if (!this.isTypeDynamic) return;
-    
-    const cssClass = ConnectorType[this.type!];
-    this.connector.classList.remove(cssClass);
-    this.element.setAttribute("data-connector-datatype", "None");
-    
-    this.type = null;
-    this.isTypeDynamic = false;
-}
+    /*[Projekt-Erweiterung] Rücksetzen des Typs nur, wenn dynamisch gesetzt */
+    public ResetType() {
+        if (!this.isTypeDynamic) return;
+        
+        const cssClass = ConnectorType[this.type!];
+        this.connector.classList.remove(cssClass);
+        this.element.setAttribute("data-connector-datatype", "None");
+        
+        this.type = null;
+        this.isTypeDynamic = false;
+    }
 
 
     public GetLinkpoint(): Location2D {

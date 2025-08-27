@@ -54,6 +54,7 @@ export abstract class ScreenController implements IWebsocketMessageListener {
     SetParameter(_params:RegExpMatchArray):void{}
 }
 
+/*[Projekt-Erweiterung] DefaultScreenController: Startseite mit Hilfetexten*/
 export class DefaultScreenController extends ScreenController {
     
      public Template = () => html`
