@@ -1030,7 +1030,7 @@ export class Flowchart {
         };
     }
 
-
+/*[Projekt-Erweiterung] Makro erstellen: aus aktuellem Flowchart einen Superblock bauen*/
     private buildSuperblockFromCurrentAndPlace(name: string) {
         const title = name && name.trim() ? name.trim() : "CustomBlock";
         const snapshot = this.macroSnapshots.get(title);

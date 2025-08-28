@@ -97,7 +97,7 @@
         margin: 0;
         padding: 0;
         width: 100%;
-        background-color: #f1f1f1;
+        
         >li>a{
           display: block;
           color: var(--black);
@@ -391,7 +391,8 @@ header, footer {
 }
 /*[Projekt-Erweiterung] Navigation Styles*/
 nav {
-  background-color: var(--silver);
+  background-color: #eeeef4;
+ 
   height: 100%;
   padding: 10px 0;
 }
