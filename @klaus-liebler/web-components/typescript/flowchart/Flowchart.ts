@@ -933,101 +933,165 @@ export class Flowchart {
 
     /*[Projekt-Erweiterung] Makro erstellen: aus aktuellen Operatoren und Links einen Superblock bauen */
     // Flowchart.ts
-    private _buildMacroDataFromSnapshot(snapshot: FlowchartData) {
-        const isInputIfaceName = (name: string) => name === "InputBlock" || /(^|\W)Input(\W|$)/i.test(name);
-        const isOutputIfaceName = (name: string) => name === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(name);
+// Flowchart.ts
+private _buildMacroDataFromSnapshot(snapshot: FlowchartData) {
+    const isInputIfaceName  = (name: string) => name === "InputBlock"  || /(^|\W)Input(\W|$)/i.test(name);
+    const isOutputIfaceName = (name: string) => name === "OutputBlock" || /(^|\W)Output(\W|$)/i.test(name);
 
-        // 1) TypeInfos zuordnen, um Namen zu haben (keine DOM-Instanzen nötig)
-        const idx2meta = new Map<number, { name: string, d: (typeof snapshot.operators)[number] }>();
-        for (const d of snapshot.operators) {
-            const ti = this.operatorRegistry.GetTypeInfo(d.globalTypeIndex);
-            if (!ti) continue;
-            idx2meta.set(d.index, { name: ti.OperatorName, d });
+    // 1) Index -> { name, d, gt } (OperatorName + Datensatz + globalTypeIndex)
+    const idx2meta = new Map<number, { name: string, d: (typeof snapshot.operators)[number], gt: number }>();
+    for (const d of snapshot.operators) {
+        const ti = this.operatorRegistry.GetTypeInfo(d.globalTypeIndex);
+        if (!ti) continue;
+        idx2meta.set(d.index, { name: ti.OperatorName, d, gt: d.globalTypeIndex });
+    }
+
+    // 2) Interface vs. intern
+    const ifaceIdx = new Set<number>();
+    const internalOperators: typeof snapshot.operators = [];
+    for (const { d, name } of idx2meta.values()) {
+        if (isInputIfaceName(name) || isOutputIfaceName(name)) ifaceIdx.add(d.index);
+        else internalOperators.push(d);
+    }
+
+    // 3) Links klassifizieren
+    const macroLinks: Array<{ fromOperatorIndex: number; fromOutput: number; toOperatorIndex: number; toInput: number; }> = [];
+    const exposedInputs: Array<{
+        targetOperatorIndex: number;
+        targetInput: number;
+        sourceName: string;
+        sourceOutput: number;
+        connectorType: ConnectorType | null;
+        connectorName: string;
+    }> = [];
+    const exposedOutputs: Array<{
+        sourceOperatorIndex: number;
+        sourceOutput: number;
+        targetName: string;
+        targetInput: number;
+        connectorType: ConnectorType | null;
+        connectorName: string;
+    }> = [];
+
+    // Cache für probierte Typen je globalTypeIndex, damit wir jeden Operator-Typ nur einmal instanziieren
+    const probedByGlobalType = new Map<number, { inputs: (ConnectorType | null)[]; outputs: (ConnectorType | null)[] }>();
+
+    const getProbed = (gt: number) => {
+        let p = probedByGlobalType.get(gt);
+        if (!p) {
+            p = this._probeConnectorTypes(gt);
+            probedByGlobalType.set(gt, p);
+        }
+        return p;
+    };
+
+    for (const l of snapshot.links) {
+        const from = idx2meta.get(l.fromOperatorIndex);
+        const to   = idx2meta.get(l.toOperatorIndex);
+        if (!from || !to) continue;
+
+        const fromIsIface = ifaceIdx.has(l.fromOperatorIndex);
+        const toIsIface   = ifaceIdx.has(l.toOperatorIndex);
+
+        if (!fromIsIface && !toIsIface) {
+            // rein interner Link bleibt erhalten
+            macroLinks.push({
+                fromOperatorIndex: l.fromOperatorIndex,
+                fromOutput:        l.fromOutput,
+                toOperatorIndex:   l.toOperatorIndex,
+                toInput:           l.toInput
+            });
+            continue;
         }
 
-        // 2) interne vs. Interface-Operatoren trennen
-        const ifaceIdx = new Set<number>();
-        const internalOperators: typeof snapshot.operators = [];
-        for (const { d, name } of idx2meta.values()) {
-            if (isInputIfaceName(name) || isOutputIfaceName(name)) {
-                ifaceIdx.add(d.index);
-            } else {
-                internalOperators.push(d);
-            }
+        // InputBlock => externes Input speist internen Eingang
+        if (isInputIfaceName(from.name) && !toIsIface) {
+            // Typ vom ZIEL-Eingang des internen Operators (to)
+            const toProbe = getProbed(to.gt);
+            const connectorType = toProbe.inputs[l.toInput] ?? null;
+
+            exposedInputs.push({
+                targetOperatorIndex: l.toOperatorIndex,
+                targetInput:         l.toInput,
+                sourceName:          from.d.caption,
+                sourceOutput:        l.fromOutput,
+                connectorType, // <- EXAKTER Typ
+                connectorName:       from.d.caption
+            });
+            continue;
         }
 
-        // 3) Links klassifizieren
-        const macroLinks: Array<{ fromOperatorIndex: number; fromOutput: number; toOperatorIndex: number; toInput: number; }> = [];
-        const exposedInputs: any[] = [];
-        const exposedOutputs: any[] = [];
+        // OutputBlock <= liest von internem Ausgang
+        if (!fromIsIface && isOutputIfaceName(to.name)) {
+            // Typ vom QUELL-Ausgang des internen Operators (from)
+            const fromProbe = getProbed(from.gt);
+            const connectorType = fromProbe.outputs[l.fromOutput] ?? null;
 
-        for (const l of snapshot.links) {
-            const from = idx2meta.get(l.fromOperatorIndex);
-            const to = idx2meta.get(l.toOperatorIndex);
-            if (!from || !to) continue;
-
-            const fromIsIface = ifaceIdx.has(l.fromOperatorIndex);
-            const toIsIface = ifaceIdx.has(l.toOperatorIndex);
-
-            // interne Links bleiben erhalten
-            if (!fromIsIface && !toIsIface) {
-                macroLinks.push({
-                    fromOperatorIndex: l.fromOperatorIndex,
-                    fromOutput: l.fromOutput,
-                    toOperatorIndex: l.toOperatorIndex,
-                    toInput: l.toInput,
-                });
-                continue;
-            }
-
-            // InputBlock => externes Input wird auf internen Eingang gemappt
-            if (isInputIfaceName(from.name) && !toIsIface) {
-                // Falls du IO-Signaturen im TypeInfo hast, ersetze 'null' durch echte Typen:
-                // const srcType = this.operatorRegistry.GetTypeInfo(from.d.globalTypeIndex)?.Outputs[l.fromOutput]?.Type ?? null;
-                // const dstType = this.operatorRegistry.GetTypeInfo(to.d.globalTypeIndex)?.Inputs [l.toInput   ]?.Type ?? null;
-                const connectorType = null; // <— sicherer Fallback; MacroOperator kann selbst inferieren
-                exposedInputs.push({
-                    targetOperatorIndex: l.toOperatorIndex,
-                    targetInput: l.toInput,
-                    sourceName: from.d.caption,
-                    sourceOutput: l.fromOutput,
-                    connectorType,
-                    connectorName: from.d.caption,
-                });
-                continue;
-            }
-
-            // OutputBlock => externes Output liest von internem Ausgang
-            if (!fromIsIface && isOutputIfaceName(to.name)) {
-                const connectorType = null; // s.o.
-                exposedOutputs.push({
-                    sourceOperatorIndex: l.fromOperatorIndex,
-                    sourceOutput: l.fromOutput,
-                    targetName: to.d.caption,
-                    targetInput: l.toInput,
-                    connectorType,
-                    connectorName: to.d.caption,
-                });
-                continue;
-            }
-
-            // Interface↔Interface ignorieren
+            exposedOutputs.push({
+                sourceOperatorIndex: l.fromOperatorIndex,
+                sourceOutput:        l.fromOutput,
+                targetName:          to.d.caption,
+                targetInput:         l.toInput,
+                connectorType, // <- EXAKTER Typ
+                connectorName:       to.d.caption
+            });
+            continue;
         }
 
-        // 4) MacroData – nur interne Operatoren + interne Links + explizite IO
-        return {
-            operators: internalOperators.map(o => ({
-                globalTypeIndex: o.globalTypeIndex,
-                caption: o.caption,
-                index: o.index,
-                posX: o.posX,
-                posY: o.posY,
-                configurationData: o.configurationData,
-            })),
-            links: macroLinks,
-            exposedInputs,
-            exposedOutputs,
-        };
+        // Interface<->Interface ignorieren
+    }
+
+    // 4) MacroData nur mit internen Ops/Links + exposed IO
+    return {
+        operators: internalOperators.map(o => ({
+            globalTypeIndex:   o.globalTypeIndex,
+            caption:           o.caption,
+            index:             o.index,
+            posX:              o.posX,
+            posY:              o.posY,
+            configurationData: o.configurationData
+        })),
+        links:          macroLinks,
+        exposedInputs,
+        exposedOutputs
+    };
+}
+
+
+
+
+    private _probeConnectorTypes(globalTypeIndex: number): { inputs: (ConnectorType | null)[]; outputs: (ConnectorType | null)[] } {
+        // Wir erzeugen eine temporäre Instanz direkt über die Registry (NICHT createOperatorInternal),
+        // damit keine Callbacks/Maps ausgelöst werden.
+        const tmpCaption = "__probe__";
+        const tmp = this.operatorRegistry.CreateByIndex(globalTypeIndex, this, tmpCaption, null);
+        if (!tmp) throw new Error(`Cannot create operator for probing: ${globalTypeIndex}`);
+
+        // Inputs/Outputs mit ihren LocalConnectorIndex einsammeln
+        const inputs: (ConnectorType | null)[] = [];
+        const outputs: (ConnectorType | null)[] = [];
+
+        // FlowchartOperator stellt GetInputConnectorByIndex / GetOutputConnectorByIndex bereit.
+        // Wir iterieren, bis null zurückkommt.
+        let i = 0;
+        while (true) {
+            const c = tmp.GetInputConnectorByIndex(i);
+            if (!c) break;
+            inputs[i] = c.Type;            // kann auch null sein (z.B. Macro-Blocks)
+            i++;
+        }
+        let o = 0;
+        while (true) {
+            const c = tmp.GetOutputConnectorByIndex(o);
+            if (!c) break;
+            outputs[o] = c.Type;
+            o++;
+        }
+
+        // SOFORT wieder aus dem DOM entfernen, keine Registrierung in this.operators erfolgt.
+        tmp.RemoveFromDOM();
+
+        return { inputs, outputs };
     }
 
 /*[Projekt-Erweiterung] Makro erstellen: aus aktuellem Flowchart einen Superblock bauen*/
